@@ -1,0 +1,6 @@
+*.o
+kernel.bin
+zoho_os.iso
+isodir/
+serial.log
+.git/
