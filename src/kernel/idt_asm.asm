@@ -65,7 +65,7 @@ ISR_NOERRCODE 31
 %endrep
 
 isr_common_stub:
-    ; Push all registers
+    ; Push all registers to create a full interrupt frame
     push rax
     push rbx
     push rcx
@@ -82,11 +82,14 @@ isr_common_stub:
     push r14
     push r15
 
-    ; Call C handler
+    ; Call C handler with current stack pointer
     mov rdi, rsp
     call isr_handler
+    
+    ; The C handler returns the new (or same) stack pointer in RAX
+    mov rsp, rax
 
-    ; Pop all registers
+    ; Pop all registers from the (potentially new) stack
     pop r15
     pop r14
     pop r13
