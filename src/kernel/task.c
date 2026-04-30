@@ -4,18 +4,16 @@
 #include "vmm.h"
 #include <stddef.h>
 
-extern void switch_context(void** old_rsp, void* new_rsp);
-
 static task_t* current_task = NULL;
 static task_t* task_list = NULL;
 static uint64_t next_id = 1;
 
 void task_init() {
-    // Create the "main" kernel task representing the current execution
     current_task = kmalloc(sizeof(task_t));
     current_task->id = 0;
     current_task->state = TASK_RUNNING;
     current_task->next = NULL;
+    current_task->rsp = 0; // Will be set on first preemption
     task_list = current_task;
     
     klog(LOG_INFO, "TASK", "Task system initialized");
@@ -25,26 +23,25 @@ task_t* task_create(void (*entry)()) {
     task_t* new_task = kmalloc(sizeof(task_t));
     new_task->id = next_id++;
     
-    // Allocate 16KB stack
     size_t stack_size = 4096 * 4;
     new_task->stack_bottom = kmalloc(stack_size);
-    new_task->stack_top = (uint8_t*)new_task->stack_bottom + stack_size;
+    uint64_t* stack = (uint64_t*)((uint8_t*)new_task->stack_bottom + stack_size);
     
-    // Setup initial context on the stack
-    uint64_t* stack = (uint64_t*)new_task->stack_top;
+    // Initial interrupt frame for iretq
+    *(--stack) = 0x10;            // SS
+    *(--stack) = (uint64_t)stack + 8; // RSP (not really used by iretq for same-privilege return, but good for completeness)
+    *(--stack) = 0x202;           // RFLAGS (Interrupts enabled)
+    *(--stack) = 0x08;            // CS
+    *(--stack) = (uint64_t)entry; // RIP
     
-    // Push return address (entry point)
-    *(--stack) = (uint64_t)entry;
-    
-    // Push dummy values for callee-saved registers (rbp, rbx, r12-r15)
-    *(--stack) = 0; // rbp
-    *(--stack) = 0; // rbx
-    *(--stack) = 0; // r12
-    *(--stack) = 0; // r13
-    *(--stack) = 0; // r14
-    *(--stack) = 0; // r15
-    
-    new_task->context = (struct task_context*)stack;
+    // Dummy error code and int number
+    *(--stack) = 0; 
+    *(--stack) = 0;
+
+    // Dummy registers for pop all
+    for (int i = 0; i < 15; i++) *(--stack) = 0;
+
+    new_task->rsp = (uint64_t)stack;
     new_task->state = TASK_READY;
     
     // Add to task list
@@ -53,27 +50,29 @@ task_t* task_create(void (*entry)()) {
     curr->next = new_task;
     new_task->next = NULL;
 
-    klog(LOG_INFO, "TASK", "Task created");
     return new_task;
 }
 
-void task_yield() {
-    task_t* old_task = current_task;
-    task_t* next_task = current_task->next;
-    
-    if (!next_task) next_task = task_list; // Round robin
-    
-    // Skip exited tasks (simplified)
-    while (next_task->state == TASK_EXITED && next_task != old_task) {
-        next_task = next_task->next;
-        if (!next_task) next_task = task_list;
+uint64_t task_schedule(uint64_t current_rsp) {
+    if (!current_task) return current_rsp;
+
+    // Save current task's state
+    current_task->rsp = current_rsp;
+    if (current_task->state == TASK_RUNNING) current_task->state = TASK_READY;
+
+    // Pick next task
+    current_task = current_task->next;
+    if (!current_task) current_task = task_list;
+
+    while (current_task->state == TASK_EXITED) {
+        current_task = current_task->next;
+        if (!current_task) current_task = task_list;
     }
 
-    if (next_task == old_task) return;
-
-    current_task = next_task;
     current_task->state = TASK_RUNNING;
-    if (old_task->state == TASK_RUNNING) old_task->state = TASK_READY;
+    return current_task->rsp;
+}
 
-    switch_context((void**)&old_task->context, next_task->context);
+void task_yield() {
+    __asm__ volatile ("int $32"); // Trigger PIT interrupt manually
 }
