@@ -10,21 +10,10 @@ typedef enum {
     TASK_EXITED
 } task_state_t;
 
-struct task_context {
-    uint64_t r15;
-    uint64_t r14;
-    uint64_t r13;
-    uint64_t r12;
-    uint64_t rbx;
-    uint64_t rbp;
-    uint64_t rip;
-};
-
 typedef struct task {
     uint64_t id;
-    void* stack_top;
+    uint64_t rsp; // Current stack pointer
     void* stack_bottom;
-    struct task_context* context;
     task_state_t state;
     struct task* next;
 } task_t;
@@ -32,5 +21,6 @@ typedef struct task {
 void task_init();
 task_t* task_create(void (*entry)());
 void task_yield();
+uint64_t task_schedule(uint64_t current_rsp);
 
 #endif
