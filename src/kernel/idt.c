@@ -2,6 +2,7 @@
 #include "vga.h"
 #include "serial.h"
 #include "keyboard.h"
+#include "task.h"
 
 extern void pit_handler();
 
@@ -113,7 +114,9 @@ static const char* exception_messages[] = {
     "Reserved"
 };
 
-void isr_handler(struct interrupt_frame* frame) {
+uint64_t isr_handler(struct interrupt_frame* frame) {
+    uint64_t rsp = (uint64_t)frame;
+
     if (frame->int_no < 32) {
         vga_print("\nKERNEL PANIC: ");
         vga_print(exception_messages[frame->int_no]);
@@ -163,6 +166,7 @@ void isr_handler(struct interrupt_frame* frame) {
         // Handle IRQ
         if (frame->int_no == 32) {
             pit_handler();
+            rsp = task_schedule(rsp);
         } else if (frame->int_no == 33) {
             keyboard_handler();
         }
@@ -170,4 +174,5 @@ void isr_handler(struct interrupt_frame* frame) {
         if (frame->int_no >= 40) outb(0xA0, 0x20);
         outb(0x20, 0x20);
     }
+    return rsp;
 }
