@@ -2,13 +2,16 @@
 #include "kmalloc.h"
 #include "klog.h"
 #include "vmm.h"
+#include "lock.h"
 #include <stddef.h>
 
 static task_t* current_task = NULL;
 static task_t* task_list = NULL;
 static uint64_t next_id = 1;
+static spinlock_t task_lock;
 
 void task_init() {
+    spin_init(&task_lock);
     current_task = kmalloc(sizeof(task_t));
     current_task->id = 0;
     current_task->state = TASK_RUNNING;
