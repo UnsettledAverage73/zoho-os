@@ -2,6 +2,7 @@
 #include "vmm.h"
 #include "pmm.h"
 #include "klog.h"
+#include "lock.h"
 
 #define HEAP_START 0x1000000 // 16MB
 #define HEAP_SIZE  0x1000000 // 16MB
@@ -13,8 +14,10 @@ struct kmalloc_header {
 };
 
 static struct kmalloc_header* free_list_head = NULL;
+static spinlock_t kmalloc_lock;
 
 void kmalloc_init() {
+    spin_init(&kmalloc_lock);
     // Identity map the heap region for now
     for (uint64_t addr = HEAP_START; addr < HEAP_START + HEAP_SIZE; addr += PAGE_SIZE) {
         void* frame = pmm_alloc_frame();
@@ -30,6 +33,7 @@ void kmalloc_init() {
 }
 
 void* kmalloc(size_t size) {
+    spin_lock(&kmalloc_lock);
     // Align size to 8 bytes
     size = (size + 7) & ~7;
 
@@ -47,17 +51,20 @@ void* kmalloc(size_t size) {
                 curr->next = new_block;
             }
             curr->is_free = 0;
+            spin_unlock(&kmalloc_lock);
             return (void*)((uint8_t*)curr + sizeof(struct kmalloc_header));
         }
         curr = curr->next;
     }
 
     klog(LOG_ERROR, "KMALLOC", "Out of memory!");
+    spin_unlock(&kmalloc_lock);
     return NULL;
 }
 
 void kfree(void* ptr) {
     if (!ptr) return;
+    spin_lock(&kmalloc_lock);
 
     struct kmalloc_header* header = (struct kmalloc_header*)((uint8_t*)ptr - sizeof(struct kmalloc_header));
     header->is_free = 1;
@@ -72,4 +79,5 @@ void kfree(void* ptr) {
             curr = curr->next;
         }
     }
+    spin_unlock(&kmalloc_lock);
 }
