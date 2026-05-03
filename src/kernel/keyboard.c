@@ -1,12 +1,7 @@
 #include "keyboard.h"
 #include "vga.h"
 #include "serial.h"
-
-static uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ volatile ( "inb %1, %0" : "=a"(ret) : "Nd"(port) );
-    return ret;
-}
+#include "io.h"
 
 static const char kbd_us[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
@@ -18,6 +13,20 @@ static const char kbd_us[128] = {
 };
 
 extern void shell_input(char c);
+
+static void ps2_wait_input_ready() {
+    uint32_t timeout = 100000;
+    while (timeout--) {
+        if (inb(0x64) & 1) return;
+    }
+}
+
+static void ps2_wait_output_ready() {
+    uint32_t timeout = 100000;
+    while (timeout--) {
+        if ((inb(0x64) & 2) == 0) return;
+    }
+}
 
 void keyboard_handler() {
     uint8_t scancode = inb(0x60);
@@ -32,5 +41,18 @@ void keyboard_handler() {
 }
 
 void keyboard_init() {
-    // PIC is already remapped, IRQ1 is INT 33
+    // Enable first PS/2 port IRQ in the controller command byte.
+    ps2_wait_output_ready();
+    outb(0x64, 0x20);
+    ps2_wait_input_ready();
+    uint8_t status = inb(0x60);
+    status |= 0x01;
+    ps2_wait_output_ready();
+    outb(0x64, 0x60);
+    ps2_wait_output_ready();
+    outb(0x60, status);
+
+    // Unmask Keyboard IRQ
+    uint8_t mask = inb(0x21);
+    outb(0x21, mask & ~2);
 }

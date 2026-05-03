@@ -1,0 +1,26 @@
+---
+id: boot-02-multiboot-header
+title: "Step 1: Multiboot2 Header"
+slug: /boot/02-multiboot-header
+sidebar_position: 3
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 1: Multiboot2 Header
+
+The Multiboot2 header is how GRUB recognizes the kernel as bootable. If the header is missing, malformed, or placed incorrectly, GRUB will reject the binary before your code ever runs.
+
+<BootstrapStepFrame step={1} title="Step 1 visualizer" />
+
+## Real code reference
+
+`src/boot/header.asm` defines:
+
+- The Multiboot2 magic value
+- Architecture field
+- Header length
+- Header checksum
+- End tag
+
+This is the first boot artifact worth documenting because it is a fixed contract between GRUB and the kernel image.

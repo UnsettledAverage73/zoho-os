@@ -82,12 +82,30 @@ isr_common_stub:
     push r14
     push r15
 
+    ; Check if we came from user mode
+    test qword [rsp + 18*8], 3 ; CS is 18th qword from top of stack
+    jz .kernel_entry
+    swapgs
+.kernel_entry:
+
     ; Call C handler with current stack pointer
     mov rdi, rsp
     call isr_handler
     
     ; The C handler returns the new (or same) stack pointer in RAX
     mov rsp, rax
+
+    ; Check if we are returning to user mode
+    test qword [rsp + 18*8], 3
+    jz .kernel_exit
+    
+    ; Load User Data segments
+    mov ax, 0x1B ; User Data (entry 3, 0x18 | 3)
+    mov ds, ax
+    mov es, ax
+    
+    swapgs
+.kernel_exit:
 
     ; Pop all registers from the (potentially new) stack
     pop r15

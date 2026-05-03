@@ -23,17 +23,27 @@ kernel.bin: $(OBJ)
 iso: kernel.bin
 	mkdir -p isodir/boot/grub
 	cp kernel.bin isodir/boot/kernel.bin
+	echo "Hello from Zoho OS VFS!" > test.txt
+	tar -cvf ramdisk.tar test.txt
+	rm test.txt
+	# Create raw HDD image (64MB)
+	dd if=/dev/zero of=hdd.img bs=1M count=64
+	# Write TAR to LBA 2048 (1MB offset)
+	dd if=ramdisk.tar of=hdd.img seek=2048 conv=notrunc
+	rm ramdisk.tar
 	echo 'set timeout=0' > isodir/boot/grub/grub.cfg
 	echo 'set default=0' >> isodir/boot/grub/grub.cfg
+	echo 'insmod all_video' >> isodir/boot/grub/grub.cfg
 	echo '' >> isodir/boot/grub/grub.cfg
 	echo 'menuentry "Zoho OS" {' >> isodir/boot/grub/grub.cfg
+	echo '	set gfxpayload=keep' >> isodir/boot/grub/grub.cfg
 	echo '	multiboot2 /boot/kernel.bin' >> isodir/boot/grub/grub.cfg
 	echo '	boot' >> isodir/boot/grub/grub.cfg
 	echo '}' >> isodir/boot/grub/grub.cfg
 	grub-mkrescue -o zoho_os.iso isodir
 
 run: iso
-	qemu-system-x86_64 -cdrom zoho_os.iso -serial stdio
+	qemu-system-x86_64 -cdrom zoho_os.iso -drive file=hdd.img,format=raw -serial stdio -smp 4 -m 512M
 
 clean:
 	rm -rf src/boot/*.o src/kernel/*.o kernel.bin zoho_os.iso isodir

@@ -1,0 +1,27 @@
+---
+id: boot-06-enable-long-mode
+title: "Step 5: Enable Long Mode in EFER"
+slug: /boot/06-enable-long-mode
+sidebar_position: 7
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 5: Enable Long Mode in EFER
+
+Setting the long mode enable bit does not switch the CPU into 64-bit execution by itself. It prepares the processor so that the later paging transition can activate long mode.
+
+<BootstrapStepFrame step={5} title="Step 5 visualizer" />
+
+## Real code reference
+
+`src/boot/main.asm` uses the `EFER` model-specific register:
+
+```asm
+mov ecx, 0xC0000080
+rdmsr
+or eax, 1 << 8
+wrmsr
+```
+
+This is the point where the CPU is configured for long mode, but not yet executing it.

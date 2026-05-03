@@ -1,0 +1,24 @@
+---
+id: boot-05-page-tables-cr3
+title: "Step 4: Page Tables and CR3"
+slug: /boot/05-page-tables-cr3
+sidebar_position: 6
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 4: Page Tables and CR3
+
+Before paging is enabled, the processor needs a valid top-level page table and `CR3` must point to it. In this kernel, the bootstrap code builds an identity-mapped region so execution can continue cleanly across the mode switch.
+
+<BootstrapStepFrame step={4} title="Step 4 visualizer" />
+
+## Real code reference
+
+`src/boot/main.asm`:
+
+- Builds `p4_table`, `p3_table`, and `p2_table`
+- Maps 2 MiB huge pages
+- Loads `p4_table` into `CR3`
+
+That setup is the minimum paging environment needed for the transition to long mode.

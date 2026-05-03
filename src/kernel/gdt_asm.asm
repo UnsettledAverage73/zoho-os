@@ -10,8 +10,6 @@ gdt_load:
     mov ax, 0x10 ; Kernel Data (2nd entry, 0x10)
     mov ds, ax
     mov es, ax
-    mov fs, ax
-    mov gs, ax
     mov ss, ax
     
     ; Far return to reload CS

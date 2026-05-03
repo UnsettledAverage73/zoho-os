@@ -62,6 +62,10 @@ static void print_char(char c) {
     col++;
 }
 
+void vga_print_char(char c) {
+    print_char(c);
+}
+
 void vga_print(const char* str) {
     for (size_t i = 0; str[i] != '\0'; i++) {
         print_char(str[i]);

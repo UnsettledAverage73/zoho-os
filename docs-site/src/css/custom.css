@@ -1,0 +1,388 @@
+:root {
+  --ifm-color-primary: #16839a;
+  --ifm-color-primary-dark: #14758a;
+  --ifm-color-primary-darker: #136e82;
+  --ifm-color-primary-darkest: #0f5a6a;
+  --ifm-color-primary-light: #1891aa;
+  --ifm-color-primary-lighter: #1a98b1;
+  --ifm-color-primary-lightest: #24abc6;
+  --ifm-code-font-size: 95%;
+  --ifm-font-family-base: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ifm-heading-font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ifm-navbar-height: 4rem;
+  --ifm-global-radius: 10px;
+  --ifm-background-surface-color: rgba(10, 18, 28, 0.96);
+}
+
+[data-theme='dark'] {
+  --ifm-background-color: #0b1118;
+  --ifm-background-surface-color: rgba(14, 21, 30, 0.98);
+  --ifm-navbar-background-color: rgba(11, 17, 24, 0.95);
+  --ifm-footer-background-color: #0b1118;
+  --ifm-color-content: #cfdae5;
+  --ifm-heading-color: #f4f7fa;
+  --ifm-menu-color: #b0c1d0;
+  --ifm-menu-color-active: #f4f7fa;
+  --ifm-menu-color-background-active: rgba(255, 255, 255, 0.05);
+  --ifm-toc-border-color: rgba(255, 255, 255, 0.08);
+  --ifm-hr-border-color: rgba(255, 255, 255, 0.08);
+  --ifm-code-background: rgba(255, 255, 255, 0.04);
+}
+
+html {
+  background: linear-gradient(180deg, #0b1118 0%, #111926 100%);
+}
+
+body {
+  background: transparent;
+}
+
+#__docusaurus {
+  position: relative;
+  z-index: 1;
+}
+
+.navbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+}
+
+.navbar__brand {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.main-wrapper {
+  background: transparent;
+}
+
+.theme-doc-sidebar-container {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(12, 18, 27, 0.86);
+}
+
+.menu {
+  padding: 1rem 0.8rem 2rem;
+}
+
+.menu__list-item-collapsible,
+.menu__link {
+  border-radius: 10px;
+}
+
+.menu__link {
+  font-size: 0.95rem;
+}
+
+.menu__link:hover,
+.menu__caret:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.menu__link--active {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.theme-doc-markdown {
+  background: rgba(14, 21, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 2rem;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.14);
+  overflow-wrap: anywhere;
+}
+
+.theme-doc-markdown h1,
+.theme-doc-markdown h2,
+.theme-doc-markdown h3 {
+  color: #f4f7fa;
+  letter-spacing: 0;
+}
+
+.theme-doc-markdown h1 {
+  font-size: clamp(2.15rem, 4vw, 3.2rem);
+  line-height: 1.1;
+}
+
+.theme-doc-markdown h2 {
+  margin-top: 2.5rem;
+}
+
+.theme-doc-markdown code {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d7e4ef;
+}
+
+.theme-doc-markdown pre code {
+  border: 0;
+}
+
+.pagination-nav__link,
+.table-of-contents,
+.theme-doc-toc-desktop,
+.theme-doc-toc-mobile,
+.alert,
+table {
+  border-radius: 16px;
+}
+
+.theme-doc-markdown table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.theme-doc-markdown pre {
+  overflow-x: auto;
+}
+
+.table-of-contents {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(14, 21, 30, 0.75);
+  padding: 1rem;
+}
+
+.pagination-nav__link {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(14, 21, 30, 0.78);
+}
+
+.footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.landingHero {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  background: rgba(14, 21, 30, 0.9);
+}
+
+.landingHero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 0.9rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #c7d3de;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.landingLead {
+  max-width: 55rem;
+  font-size: 1.02rem;
+  color: #cfdae5;
+}
+
+.landingActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1.4rem;
+}
+
+.landingButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #ecf3f8;
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.landingButton:hover {
+  color: #ffffff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.landingButton--primary {
+  border-color: rgba(22, 131, 154, 0.45);
+  background: rgba(22, 131, 154, 0.18);
+}
+
+.statusPanel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.statusPanel__title {
+  margin-bottom: 0.8rem;
+  color: #d7e4ef;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+}
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.statusRow:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.statusRow span {
+  color: #a6b8c8;
+}
+
+.statusRow strong {
+  color: #f4f7fa;
+  text-align: right;
+  max-width: 62%;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.featureCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.2rem;
+  background: rgba(14, 21, 30, 0.8);
+}
+
+.featureCard h2 {
+  margin-top: 0.35rem;
+  margin-bottom: 0.6rem;
+  font-size: 1.25rem;
+}
+
+.featureCard__kicker {
+  color: #c7d3de;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 1200px) {
+  .landingHero__grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.9fr);
+  }
+}
+
+@media (max-width: 996px) {
+  .theme-doc-sidebar-container {
+    background: rgba(12, 18, 27, 0.96);
+  }
+
+  .theme-doc-markdown {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .landingHero {
+    padding: 1.25rem;
+  }
+
+  .landingHero__grid,
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .landingHero__grid {
+    gap: 1rem;
+  }
+
+  .statusRow strong {
+    max-width: 58%;
+  }
+}
+
+@media (max-width: 768px) {
+  .theme-doc-markdown {
+    padding: 1rem;
+  }
+
+  .theme-doc-markdown h1 {
+    font-size: clamp(1.8rem, 7vw, 2.4rem);
+  }
+
+  .landingHero {
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .landingActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landingButton {
+    width: 100%;
+  }
+
+  .statusRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .statusRow strong {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .featureGrid {
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .featureCard {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .menu {
+    padding: 0.75rem 0.65rem 1.5rem;
+  }
+
+  .theme-doc-markdown {
+    padding: 0.9rem;
+    border-radius: 10px;
+  }
+
+  .landingHero {
+    border-radius: 12px;
+    padding: 0.9rem;
+  }
+
+  .landingLead {
+    font-size: 0.96rem;
+  }
+
+  .featureCard,
+  .statusPanel {
+    border-radius: 12px;
+  }
+}

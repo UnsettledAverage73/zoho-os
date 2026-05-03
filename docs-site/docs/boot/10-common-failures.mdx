@@ -1,0 +1,24 @@
+---
+id: boot-10-common-failures
+title: "Step 9: Common Failures"
+slug: /boot/10-common-failures
+sidebar_position: 11
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 9: Common Failures
+
+The visualizer already includes a failure catalogue, so this page becomes the natural place to collect debugging notes as the docs grow.
+
+<BootstrapStepFrame step={9} title="Common failures visualizer" />
+
+## Initial failure cases to document
+
+- Wrong Multiboot header layout or checksum
+- Missing or invalid stack setup
+- Bad `CR3` physical address
+- Missing `CR4.PAE`
+- Broken `EFER.LME` sequence
+- Missing far jump after loading the 64-bit GDT
+- Incorrect instruction encoding at the 64-bit entry point

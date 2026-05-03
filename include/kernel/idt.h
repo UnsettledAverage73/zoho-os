@@ -24,6 +24,7 @@ struct interrupt_frame {
     uint64_t rip, cs, rflags, rsp, ss;
 } __attribute__((packed));
 
-void idt_init();
+void idt_init_global();
+void idt_init_per_cpu();
 
 #endif

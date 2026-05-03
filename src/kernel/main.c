@@ -9,65 +9,98 @@
 #include "pit.h"
 #include "kmalloc.h"
 #include "task.h"
+#include "syscall.h"
+#include "ata.h"
+#include "ext2.h"
+#include "vfs.h"
+#include "tar.h"
+#include "acpi.h"
+#include "apic.h"
+#include "smp.h"
+#include "cpu.h"
+#include "graphics.h"
+#include "multiboot2.h"
+#include "mouse.h"
+#include "keyboard.h"
+#include "window.h"
+#include "string.h"
 
-void task_test_1() {
-    while(1) {
-        klog(LOG_INFO, "TASK1", "Running thread A");
-        for(volatile int i=0; i<100000000; i++);
-        // No yield! Preemption handles it.
-    }
-}
+void kmain(unsigned long magic, unsigned long addr) {
+    (void)magic;
+    struct multiboot_info* mb_info = (struct multiboot_info*)addr;
 
-void task_test_2() {
-    while(1) {
-        klog(LOG_INFO, "TASK2", "Running thread B");
-        for(volatile int i=0; i<100000000; i++);
-    }
-}
-
-void kmain(struct multiboot_info* mb_info) {
+    cpu_early_init();
     serial_init();
     vga_clear();
-    klog(LOG_INFO, "KERNEL", "Zoho OS Booted successfully in 64-bit Long Mode!");
+    klog(LOG_INFO, "KERNEL", "Zoho OS Booting...");
     
-    klog(LOG_INFO, "GDT", "Initializing GDT/TSS...");
-    gdt_init();
-    
-    klog(LOG_INFO, "IDT", "Initializing IDT/Exceptions/PIC...");
-    idt_init();
-
-    klog(LOG_INFO, "PMM", "Initializing PMM...");
     pmm_init(mb_info);
-
-    klog(LOG_INFO, "VMM", "Initializing VMM...");
     vmm_init();
-
-    klog(LOG_INFO, "VMM", "Testing VMM mapping...");
-    void* frame = pmm_alloc_frame();
-    vmm_map(0xDEADBEEF000, (uint64_t)frame, PAGE_WRITABLE);
-    uint64_t* ptr = (uint64_t*)0xDEADBEEF000;
-    *ptr = 0xCAFEBABE;
-    if (*ptr == 0xCAFEBABE) {
-        klog(LOG_INFO, "VMM", "VMM Mapping Test: SUCCESS");
-    }
-
-    klog(LOG_INFO, "PIT", "Initializing PIT...");
-    pit_init(100);
-
-    klog(LOG_INFO, "KMALLOC", "Initializing kmalloc...");
     kmalloc_init();
 
-    klog(LOG_INFO, "TASK", "Initializing Task System...");
-    task_init();
-    task_create(task_test_1);
-    task_create(task_test_2);
+    acpi_init();
 
-    klog(LOG_INFO, "SHELL", "Initializing Shell...");
+    // Map LAPIC area
+    uint32_t lapic_phys = acpi_get_lapic_addr();
+    if (lapic_phys == 0) lapic_phys = 0xFEE00000; // Fallback
+    
+    uint64_t cr3;
+    __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
+    vmm_map((void*)cr3, lapic_phys, lapic_phys, PAGE_WRITABLE | (1 << 3) | (1 << 4)); 
+    // (1<<3) = PWT, (1<<4) = PCD for MMIO
+
+    gdt_init();
+    idt_init_global();
+    idt_init_per_cpu();
+
+    lapic_init();
+    pit_init(100);
+    lapic_timer_init(100);
+
+    __asm__ volatile ("sti");
+    tsc_calibrate();
+
+    task_init_global();
+    task_init_per_cpu();
+    syscall_init();
+    
+    smp_init();
+
+    if (ata_init() == 0) {
+        ext2_init();
+    }
+
+    vfs_init();
+    tar_init_disk(2048);
+
+    struct multiboot_tag* tag;
+    for (tag = (struct multiboot_tag*)(mb_info->tags);
+         tag->type != MULTIBOOT_TAG_TYPE_END;
+         tag = (struct multiboot_tag*)((uint8_t*)tag + ((tag->size + 7) & ~7))) {
+        
+        if (tag->type == MULTIBOOT_TAG_TYPE_FRAMEBUFFER) {
+            graphics_init((struct multiboot_tag_framebuffer*)tag);
+        }
+    }
+
+    mouse_init();
+    keyboard_init();
+    window_init();
+
+    // Create a terminal window for the shell
+    window_t* shell_win = window_create(50, 50, 600, 400, 0xFF000000); 
+    shell_win->buffer = kmalloc(600 * 375 * 4); // 400 - 25 = 375
+    memset(shell_win->buffer, 0, 600 * 375 * 4);
+    shell_set_window(shell_win);
     shell_init();
-
-    klog(LOG_INFO, "KERNEL", "System components initialized.");
+    
+    klog(LOG_INFO, "KERNEL", "System stabilized on LAPIC Timer. Starting scheduler...");
 
     while(1) {
-        task_yield();
+        window_update();
+        if (window_needs_redraw()) {
+            window_draw_all();
+        }
+        for(volatile int i=0; i<100000; i++);
     }
 }

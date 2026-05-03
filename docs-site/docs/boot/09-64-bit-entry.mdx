@@ -1,0 +1,32 @@
+---
+id: boot-09-64-bit-entry
+title: "Step 8: 64-bit Entry and kmain"
+slug: /boot/09-64-bit-entry
+sidebar_position: 10
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 8: 64-bit Entry and `kmain`
+
+Once the far jump lands in 64-bit code, the bootstrap assembly can normalize segment state and hand off to the C kernel entry.
+
+<BootstrapStepFrame step={8} title="Step 8 visualizer" />
+
+## Real code reference
+
+`src/boot/long_mode_init.asm`:
+
+```asm
+long_mode_start:
+    mov ax, 0
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    call kmain
+```
+
+`src/kernel/main.c` then initializes the higher-level kernel systems such as serial logging, GDT, IDT, memory management, PIT, heap, tasks, and the shell.

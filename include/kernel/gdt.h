@@ -47,5 +47,6 @@ struct gdt_tss_entry {
 } __attribute__((packed));
 
 void gdt_init();
+void tss_set_rsp0(uint64_t rsp);
 
 #endif

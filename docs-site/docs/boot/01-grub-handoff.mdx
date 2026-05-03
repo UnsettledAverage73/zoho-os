@@ -1,0 +1,24 @@
+---
+id: boot-01-grub-handoff
+title: "Step 0: GRUB Handoff"
+slug: /boot/01-grub-handoff
+sidebar_position: 2
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 0: GRUB Handoff
+
+GRUB loads the kernel and enters your code in 32-bit mode. At this point the kernel is not yet executing 64-bit instructions, paging is not active, and your own stack still needs to be established.
+
+<BootstrapStepFrame step={0} title="Step 0 visualizer" />
+
+## What matters here
+
+- `EAX` must contain the Multiboot2 magic value.
+- `EBX` carries the Multiboot info pointer supplied by GRUB.
+- Your boot code must treat the environment as temporary and take control quickly.
+
+## Real code context
+
+In this repo, the entry path starts in `src/boot/main.asm`, where the Multiboot values are checked before long-mode setup continues.

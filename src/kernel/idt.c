@@ -3,6 +3,11 @@
 #include "serial.h"
 #include "keyboard.h"
 #include "task.h"
+#include "io.h"
+#include "cpu.h"
+#include "klog.h"
+#include "mouse.h"
+#include "apic.h"
 
 extern void pit_handler();
 
@@ -35,10 +40,6 @@ static void idt_set_gate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags
     idt[num].reserved = 0;
 }
 
-static void outb(uint16_t port, uint8_t val) {
-    __asm__ volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
-}
-
 static void pic_remap() {
     outb(0x20, 0x11);
     outb(0xA0, 0x11);
@@ -48,11 +49,18 @@ static void pic_remap() {
     outb(0xA1, 0x02);
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
-    outb(0x21, 0x0);
-    outb(0xA1, 0x0);
+    outb(0x21, 0xFF); // Mask all Master IRQs
+    outb(0xA1, 0xFF); // Mask all Slave IRQs
 }
 
-void idt_init() {
+static void pic_eoi(uint8_t irq) {
+    if (irq >= 8) {
+        outb(0xA0, 0x20);
+    }
+    outb(0x20, 0x20);
+}
+
+void idt_init_global() {
     idt_p.limit = (sizeof(struct idt_entry) * 256) - 1;
     idt_p.base = (uint64_t)&idt;
 
@@ -74,9 +82,10 @@ void idt_init() {
     for (int i = 0; i < 48; i++) {
         idt_set_gate(i, (uint64_t)isrs[i], 0x08, 0x8E); // 0x8E: Present, ring 0, interrupt gate
     }
+}
 
+void idt_init_per_cpu() {
     idt_flush(&idt_p);
-    __asm__ volatile ("sti");
 }
 
 static const char* exception_messages[] = {
@@ -118,6 +127,16 @@ uint64_t isr_handler(struct interrupt_frame* frame) {
     uint64_t rsp = (uint64_t)frame;
 
     if (frame->int_no < 32) {
+        // Special case: User Mode exception (e.g. Page Fault)
+        if ((frame->cs & 3) == 3) {
+            klog(LOG_ERROR, "KERNEL", "User process violation! Terminating.");
+            cpu_t* cpu = get_cpu();
+            if (cpu->current_task) {
+                cpu->current_task->state = TASK_EXITED;
+                return task_schedule(rsp);
+            }
+        }
+
         vga_print("\nKERNEL PANIC: ");
         vga_print(exception_messages[frame->int_no]);
         vga_print("\n");
@@ -164,15 +183,21 @@ uint64_t isr_handler(struct interrupt_frame* frame) {
         while(1) __asm__("hlt");
     } else if (frame->int_no >= 32 && frame->int_no < 48) {
         // Handle IRQ
+        uint8_t irq = (uint8_t)(frame->int_no - 32);
+
         if (frame->int_no == 32) {
             pit_handler();
             rsp = task_schedule(rsp);
         } else if (frame->int_no == 33) {
             keyboard_handler();
+        } else if (frame->int_no == 36) {
+            serial_handler();
+        } else if (frame->int_no == 44) {
+            mouse_handler();
         }
 
-        if (frame->int_no >= 40) outb(0xA0, 0x20);
-        outb(0x20, 0x20);
+        pic_eoi(irq);
+        lapic_eoi();
     }
     return rsp;
 }

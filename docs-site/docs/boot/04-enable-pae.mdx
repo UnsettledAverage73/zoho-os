@@ -1,0 +1,26 @@
+---
+id: boot-04-enable-pae
+title: "Step 3: Enable PAE"
+slug: /boot/04-enable-pae
+sidebar_position: 5
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 3: Enable PAE
+
+Long mode depends on PAE. Before 64-bit paging can become active, the boot code must set `CR4.PAE`.
+
+<BootstrapStepFrame step={3} title="Step 3 visualizer" />
+
+## Real code reference
+
+`src/boot/main.asm` performs the change during `enable_paging`:
+
+```asm
+mov eax, cr4
+or eax, 1 << 5
+mov cr4, eax
+```
+
+Document this step separately because it is one of the easiest places to make the boot sequence fail silently.

@@ -1,0 +1,26 @@
+---
+id: boot-03-entry-stack
+title: "Step 2: Entry Point and Stack"
+slug: /boot/03-entry-stack
+sidebar_position: 4
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 2: Entry Point and Stack
+
+The first operational requirement is a valid stack. Without it, any `call`, interrupt, or fault path can immediately corrupt memory or crash the system.
+
+<BootstrapStepFrame step={2} title="Step 2 visualizer" />
+
+## Real code reference
+
+In `src/boot/main.asm`:
+
+```asm
+start:
+    mov esp, stack_top
+    mov esi, ebx
+```
+
+The boot code stores the Multiboot info pointer and points `ESP` at the bootstrap stack allocated in `.bss`.

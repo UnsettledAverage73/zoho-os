@@ -2,6 +2,7 @@ ENTRY(start)
 
 SECTIONS {
     . = 1M;
+    kernel_start = .;
 
     .boot :
     {
@@ -28,4 +29,5 @@ SECTIONS {
     {
         *(.bss)
     }
+    kernel_end = .;
 }

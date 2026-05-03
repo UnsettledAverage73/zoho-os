@@ -1,0 +1,26 @@
+---
+id: boot-08-gdt-far-jump
+title: "Step 7: Load GDT and Far Jump"
+slug: /boot/08-gdt-far-jump
+sidebar_position: 9
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 7: Load GDT and Far Jump
+
+After paging is active, the boot path must load a 64-bit code segment and perform a far jump so `CS` is refreshed with the correct descriptor.
+
+<BootstrapStepFrame step={7} title="Step 7 visualizer" />
+
+## Real code reference
+
+`src/boot/main.asm`:
+
+```asm
+lgdt [gdt64.pointer]
+mov edi, esi
+jmp gdt64.code:long_mode_start
+```
+
+The far jump is not optional. Without it, the processor state is inconsistent and execution becomes undefined.

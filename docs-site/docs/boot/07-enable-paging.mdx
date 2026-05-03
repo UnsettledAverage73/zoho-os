@@ -1,0 +1,26 @@
+---
+id: boot-07-enable-paging
+title: "Step 6: Enable Paging"
+slug: /boot/07-enable-paging
+sidebar_position: 8
+---
+
+import BootstrapStepFrame from '@site/src/components/BootstrapStepFrame';
+
+# Step 6: Enable Paging
+
+The actual transition becomes live when paging is enabled with the prepared page tables and `EFER.LME` already set.
+
+<BootstrapStepFrame step={6} title="Step 6 visualizer" />
+
+## Real code reference
+
+`src/boot/main.asm` sets `CR0.PG`:
+
+```asm
+mov eax, cr0
+or eax, 1 << 31
+mov cr0, eax
+```
+
+From here, the system is in the sensitive part of the transition. A wrong page table pointer or broken mapping usually means an immediate reset or triple fault.
