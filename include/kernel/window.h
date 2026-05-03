@@ -31,6 +31,8 @@ typedef struct window {
     struct window* next;
 } window_t;
 
+#define WINDOW_MAX_DIRTY_RECTS 32
+
 void window_init();
 window_t* window_create(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t bg_color);
 window_t* window_get_by_id(uint32_t id);

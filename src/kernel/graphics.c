@@ -11,6 +11,20 @@ static uint32_t fb_height = 0;
 static uint32_t fb_pitch = 0;
 static uint8_t fb_bpp = 0;
 
+static int clip_rect(rect_t* rect) {
+    int32_t x2 = rect->x + rect->w;
+    int32_t y2 = rect->y + rect->h;
+
+    if (rect->x < 0) rect->x = 0;
+    if (rect->y < 0) rect->y = 0;
+    if (x2 > (int32_t)fb_width) x2 = (int32_t)fb_width;
+    if (y2 > (int32_t)fb_height) y2 = (int32_t)fb_height;
+
+    rect->w = x2 - rect->x;
+    rect->h = y2 - rect->y;
+    return rect->w > 0 && rect->h > 0;
+}
+
 void graphics_init(struct multiboot_tag_framebuffer* tag) {
     klog(LOG_INFO, "GRAPHICS", "Initializing Framebuffer...");
     
@@ -132,6 +146,21 @@ void graphics_swap() {
     memcpy((void*)fb_addr, backbuffer, fb_pitch * fb_height);
 }
 
+void graphics_swap_rects(const rect_t* rects, uint32_t count) {
+    if (!backbuffer || !fb_addr || !rects) return;
+
+    for (uint32_t i = 0; i < count; i++) {
+        rect_t rect = rects[i];
+        if (!clip_rect(&rect)) continue;
+
+        for (int32_t row = 0; row < rect.h; row++) {
+            uint8_t* dst = (uint8_t*)fb_addr + (uint64_t)(rect.y + row) * fb_pitch + (uint64_t)rect.x * 4;
+            uint32_t* src = backbuffer + (uint64_t)(rect.y + row) * fb_width + rect.x;
+            memcpy(dst, src, (uint64_t)rect.w * 4);
+        }
+    }
+}
+
 void graphics_put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     if (!backbuffer || x >= fb_width || y >= fb_height) return;
     backbuffer[y * fb_width + x] = color;
@@ -154,6 +183,20 @@ void graphics_clear(uint32_t color) {
     }
 }
 
+void graphics_clear_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color) {
+    if (!backbuffer) return;
+
+    rect_t rect = {x, y, w, h};
+    if (!clip_rect(&rect)) return;
+
+    for (int32_t py = 0; py < rect.h; py++) {
+        uint32_t* row = backbuffer + (uint64_t)(rect.y + py) * fb_width + rect.x;
+        for (int32_t px = 0; px < rect.w; px++) {
+            row[px] = color;
+        }
+    }
+}
+
 void graphics_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     if (!backbuffer) return;
     for (uint32_t i = 0; i < h; i++) {
@@ -161,4 +204,12 @@ void graphics_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t
             graphics_put_pixel(x + j, y + i, color);
         }
     }
+}
+
+uint32_t graphics_get_width() {
+    return fb_width;
+}
+
+uint32_t graphics_get_height() {
+    return fb_height;
 }
