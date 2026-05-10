@@ -34,18 +34,25 @@ void graphics_init(struct multiboot_tag_framebuffer* tag) {
     fb_bpp = tag->bpp;
     
     uint64_t phys_addr = tag->addr;
-    fb_addr = 0xFFFFFFFF10000000; 
+    fb_addr = phys_addr; 
     
     uint64_t fb_size = fb_pitch * fb_height;
     uint64_t cr3;
     __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
     
     for (uint64_t i = 0; i < fb_size; i += 4096) {
-        vmm_map((void*)cr3, fb_addr + i, phys_addr + i, PAGE_WRITABLE | PAGE_PRESENT);
+        vmm_map((void*)cr3, fb_addr + i, phys_addr + i, PAGE_WRITABLE | PAGE_PRESENT | (1 << 3) | (1 << 4)); // PWT | PCD
     }
     
+    // Reload CR3
+    __asm__ volatile ("mov %%cr3, %%rax\nmov %%rax, %%cr3" ::: "rax");
+    
     backbuffer = kmalloc(fb_size);
-    klog(LOG_INFO, "GRAPHICS", "Framebuffer initialized");
+    if (!backbuffer) {
+        klog(LOG_ERROR, "GRAPHICS", "Failed to allocate backbuffer (size: %d)", fb_size);
+        return;
+    }
+    klog(LOG_INFO, "GRAPHICS", "Framebuffer initialized at %p", fb_addr);
 }
 
 static uint8_t font8x8_basic[128][8] = {
@@ -206,10 +213,20 @@ void graphics_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t
     }
 }
 
+void graphics_draw_line_buffer(uint32_t x, uint32_t y, uint32_t w, uint32_t* buffer) {
+    if (!backbuffer || x + w > fb_width || y >= fb_height) return;
+    uint32_t* dst = backbuffer + (uint64_t)y * fb_width + x;
+    memcpy(dst, buffer, (uint64_t)w * 4);
+}
+
 uint32_t graphics_get_width() {
     return fb_width;
 }
 
 uint32_t graphics_get_height() {
     return fb_height;
+}
+
+uint64_t graphics_get_fb_addr() {
+    return fb_addr;
 }
