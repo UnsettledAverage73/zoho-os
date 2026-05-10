@@ -39,6 +39,10 @@ void serial_handler() {
     }
 }
 
+void serial_poll_input() {
+    serial_handler();
+}
+
 static spinlock_t serial_lock;
 
 uint64_t serial_lock_all() {
