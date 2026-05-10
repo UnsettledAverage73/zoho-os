@@ -1,6 +1,7 @@
 #include "pit.h"
 #include "klog.h"
 #include "io.h"
+#include "task.h"
 
 static uint64_t ticks = 0;
 
@@ -27,6 +28,7 @@ void pit_init(uint32_t frequency) {
 
 void pit_handler() {
     ticks++;
+    task_timer_tick();
 }
 
 uint64_t pit_get_ticks() {
