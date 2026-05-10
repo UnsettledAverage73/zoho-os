@@ -13,5 +13,6 @@ void serial_print_hex(uint64_t val);
 void serial_print_dec(uint64_t val);
 void serial_print_dec_no_lock(uint64_t val);
 void serial_handler();
+void serial_poll_input();
 
 #endif
