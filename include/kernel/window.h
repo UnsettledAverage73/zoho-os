@@ -23,6 +23,8 @@ typedef struct window {
     uint32_t* buffer;      // Shared buffer (kernel side pointer)
     uint64_t owner_pid;
     uint8_t dirty;
+    uint8_t destroyed;
+    uint32_t refcount;
     
     gui_event_t event_queue[16];
     uint8_t event_head;
@@ -36,10 +38,14 @@ typedef struct window {
 void window_init();
 window_t* window_create(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t bg_color);
 window_t* window_get_by_id(uint32_t id);
+void window_set_owner(window_t* win, uint64_t owner_pid);
+void window_set_buffer(window_t* win, uint32_t* buffer);
+int window_pop_event(uint32_t id, gui_event_t* out_event);
 void window_destroy_by_pid(uint64_t pid);
 void window_update();
 void window_draw_all();
 void window_mark_dirty(window_t* win);
+void window_mark_region_dirty(window_t* win, int32_t x, int32_t y, int32_t w, int32_t h);
 int window_needs_redraw();
 
 #endif
