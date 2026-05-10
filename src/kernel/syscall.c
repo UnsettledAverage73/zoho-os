@@ -34,7 +34,6 @@ extern void syscall_entry();
 uint32_t sys_create_window(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
     window_t* win = window_create(x, y, w, h, 0xFFFFFFFF);
     cpu_t* cpu = get_cpu();
-    win->owner_pid = cpu->current_task->id;
 
     uint32_t client_h = h - 25;
     uint32_t size = w * client_h * 4;
@@ -42,7 +41,8 @@ uint32_t sys_create_window(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
 
     uint32_t* kernel_buf = kmalloc(num_pages * 4096);
     memset(kernel_buf, 0, num_pages * 4096);
-    win->buffer = kernel_buf;
+    window_set_owner(win, cpu->current_task->id);
+    window_set_buffer(win, kernel_buf);
 
     uint64_t user_addr = 0xA0000000 + (win->id * 0x1000000);
     for (uint32_t i = 0; i < num_pages; i++) {
@@ -53,13 +53,7 @@ uint32_t sys_create_window(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
 }
 
 int sys_get_event(uint32_t win_id, gui_event_t* out_event) {
-    window_t* win = window_get_by_id(win_id);
-    if (!win) return -1;
-    if (win->event_head == win->event_tail) return 0;
-
-    memcpy(out_event, &win->event_queue[win->event_head], sizeof(gui_event_t));
-    win->event_head = (win->event_head + 1) % 16;
-    return 1;
+    return window_pop_event(win_id, out_event);
 }
 
 void sys_exit(int status) {
