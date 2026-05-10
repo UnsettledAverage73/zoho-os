@@ -3,6 +3,7 @@
 #include "pmm.h"
 #include "klog.h"
 #include "lock.h"
+#include "string.h"
 
 #define HEAP_START 0x1000000 // 16MB
 #define HEAP_SIZE  0x1000000 // 16MB
@@ -15,20 +16,28 @@ struct kmalloc_header {
 
 static struct kmalloc_header* free_list_head = NULL;
 static spinlock_t kmalloc_lock;
+static kmalloc_stats_t kmalloc_stats;
 
 void kmalloc_init() {
     spin_init(&kmalloc_lock);
-    uint64_t cr3;
-    __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
+    
+    // Memory is already identity mapped by the bootloader (first 4GB).
+    // We just need to mark the frames as used in PMM.
     for (uint64_t addr = HEAP_START; addr < HEAP_START + HEAP_SIZE; addr += PAGE_SIZE) {
-        void* frame = pmm_alloc_frame();
-        vmm_map((void*)cr3, addr, (uint64_t)frame, PAGE_WRITABLE);
+        // We don't actually need to call vmm_map here because of the identity mapping,
+        // but we MUST ensure PMM knows these frames are taken.
+        // In a more advanced VMM, we would map these to specific virtual addresses.
+        (void)pmm_alloc_frame(); 
     }
 
     free_list_head = (struct kmalloc_header*)HEAP_START;
     free_list_head->size = HEAP_SIZE - sizeof(struct kmalloc_header);
     free_list_head->is_free = 1;
     free_list_head->next = NULL;
+    
+    memset(&kmalloc_stats, 0, sizeof(kmalloc_stats_t));
+    kmalloc_stats.bytes_free = free_list_head->size;
+    kmalloc_stats.largest_free_block = free_list_head->size;
 
     klog(LOG_INFO, "KMALLOC", "Kernel heap initialized at 16MB (Size: 16MB)");
 }
@@ -52,14 +61,21 @@ void* kmalloc(size_t size) {
                 curr->next = new_block;
             }
             curr->is_free = 0;
+            kmalloc_stats.alloc_count++;
+            kmalloc_stats.live_allocations++;
+            kmalloc_stats.bytes_used += curr->size;
+            if (kmalloc_stats.bytes_used > kmalloc_stats.peak_bytes_used) {
+                kmalloc_stats.peak_bytes_used = kmalloc_stats.bytes_used;
+            }
             spin_unlock_irqrestore(&kmalloc_lock, flags);
             return (void*)((uint8_t*)curr + sizeof(struct kmalloc_header));
         }
         curr = curr->next;
     }
 
-    klog(LOG_ERROR, "KMALLOC", "Out of memory!");
+    kmalloc_stats.failed_allocations++;
     spin_unlock_irqrestore(&kmalloc_lock, flags);
+    klog(LOG_ERROR, "KMALLOC", "Out of memory!");
     return NULL;
 }
 
@@ -68,7 +84,21 @@ void kfree(void* ptr) {
     uint64_t flags = spin_lock_irqsave(&kmalloc_lock);
 
     struct kmalloc_header* header = (struct kmalloc_header*)((uint8_t*)ptr - sizeof(struct kmalloc_header));
+    if (header->is_free) {
+        spin_unlock_irqrestore(&kmalloc_lock, flags);
+        return;
+    }
+
     header->is_free = 1;
+    kmalloc_stats.free_count++;
+    if (kmalloc_stats.live_allocations > 0) {
+        kmalloc_stats.live_allocations--;
+    }
+    if (kmalloc_stats.bytes_used >= header->size) {
+        kmalloc_stats.bytes_used -= header->size;
+    } else {
+        kmalloc_stats.bytes_used = 0;
+    }
 
     // Coalesce free blocks
     struct kmalloc_header* curr = free_list_head;
@@ -80,5 +110,29 @@ void kfree(void* ptr) {
             curr = curr->next;
         }
     }
+    spin_unlock_irqrestore(&kmalloc_lock, flags);
+}
+
+void kmalloc_get_stats(kmalloc_stats_t* out_stats) {
+    if (!out_stats) return;
+
+    uint64_t flags = spin_lock_irqsave(&kmalloc_lock);
+    size_t bytes_free = 0;
+    size_t largest_free = 0;
+
+    struct kmalloc_header* curr = free_list_head;
+    while (curr) {
+        if (curr->is_free) {
+            bytes_free += curr->size;
+            if (curr->size > largest_free) {
+                largest_free = curr->size;
+            }
+        }
+        curr = curr->next;
+    }
+
+    kmalloc_stats.bytes_free = bytes_free;
+    kmalloc_stats.largest_free_block = largest_free;
+    *out_stats = kmalloc_stats;
     spin_unlock_irqrestore(&kmalloc_lock, flags);
 }
