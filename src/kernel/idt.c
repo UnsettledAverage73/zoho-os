@@ -187,7 +187,9 @@ uint64_t isr_handler(struct interrupt_frame* frame) {
 
         if (frame->int_no == 32) {
             pit_handler();
-            rsp = task_schedule(rsp);
+            if (task_needs_schedule()) {
+                rsp = task_schedule(rsp);
+            }
         } else if (frame->int_no == 33) {
             keyboard_handler();
         } else if (frame->int_no == 36) {
