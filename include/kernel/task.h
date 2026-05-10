@@ -20,6 +20,7 @@ typedef struct task {
     void* pml4;
     task_state_t state;
     int cpu_id; 
+    uint32_t timeslice;
     struct task* next;
 } task_t;
 
@@ -37,6 +38,9 @@ task_t* task_create_user(void (*entry)());
 task_t* task_exec(void* elf_data);
 task_t* task_exec_file(const char* path);
 void task_yield();
+void task_timer_tick();
+int task_needs_schedule();
+void task_request_reschedule();
 uint64_t task_schedule(uint64_t current_rsp);
 
 #endif
