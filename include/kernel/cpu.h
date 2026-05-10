@@ -11,7 +11,8 @@ typedef struct cpu {
     struct cpu* self;       // 0x10
     task_t* current_task;   // 0x18
     uint8_t id;             // 0x20
-    uint8_t pad[7];
+    uint8_t need_resched;   // 0x21
+    uint8_t pad[6];
 
     struct {
         struct gdt_entry entries[5];
