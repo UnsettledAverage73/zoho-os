@@ -20,13 +20,15 @@ void vmm_init() {
 }
 
 void* vmm_create_address_space() {
-    uint64_t flags = spin_lock_irqsave(&vmm_lock);
     uint64_t* new_pml4 = (uint64_t*)pmm_alloc_frame();
+    if (!new_pml4) return NULL;
+
     for (int i = 0; i < 512; i++) new_pml4[i] = 0;
-    
+
+    uint64_t flags = spin_lock_irqsave(&vmm_lock);
     new_pml4[0] = current_pml4[0];
     spin_unlock_irqrestore(&vmm_lock, flags);
-    
+
     return new_pml4;
 }
 
@@ -35,7 +37,6 @@ void vmm_switch_address_space(void* pml4) {
 }
 
 void vmm_destroy_address_space(void* pml4_ptr) {
-    uint64_t flags = spin_lock_irqsave(&vmm_lock);
     uint64_t* pml4 = (uint64_t*)pml4_ptr;
     for (int i = 1; i < 512; i++) {
         if (pml4[i] & PAGE_PRESENT) {
@@ -61,41 +62,64 @@ void vmm_destroy_address_space(void* pml4_ptr) {
         }
     }
     pmm_free_frame(pml4);
-    spin_unlock_irqrestore(&vmm_lock, flags);
 }
 
-static uint64_t* get_next_table(uint64_t* table, uint64_t index, int alloc) {
-    if (table[index] & PAGE_PRESENT) {
-        return (uint64_t*)(table[index] & ~0xFFFULL);
-    } else {
-        if (!alloc) return NULL;
-        uint64_t* next_table = (uint64_t*)pmm_alloc_frame();
-        if (!next_table) return NULL;
-        
-        for (int i = 0; i < 512; i++) next_table[i] = 0;
-        
-        table[index] = (uint64_t)next_table | PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
-        return next_table;
+static uint64_t* alloc_zeroed_table() {
+    uint64_t* next_table = (uint64_t*)pmm_alloc_frame();
+    if (!next_table) return NULL;
+
+    for (int i = 0; i < 512; i++) next_table[i] = 0;
+    return next_table;
+}
+
+static uint64_t* get_existing_table(uint64_t* table, uint64_t index) {
+    if (!(table[index] & PAGE_PRESENT)) return NULL;
+    return (uint64_t*)(table[index] & ~0xFFFULL);
+}
+
+static uint64_t* ensure_next_table(uint64_t* table, uint64_t index) {
+    uint64_t* next = get_existing_table(table, index);
+    if (next) return next;
+
+    uint64_t* new_table = alloc_zeroed_table();
+    if (!new_table) return NULL;
+
+    uint64_t irq_flags = spin_lock_irqsave(&vmm_lock);
+    next = get_existing_table(table, index);
+    if (!next) {
+        table[index] = (uint64_t)new_table | PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
+        next = new_table;
+        new_table = NULL;
     }
+    spin_unlock_irqrestore(&vmm_lock, irq_flags);
+
+    if (new_table) {
+        pmm_free_frame(new_table);
+    }
+
+    return next;
 }
 
 void vmm_map(void* pml4, uint64_t virt, uint64_t phys, uint64_t flags) {
+    uint64_t* pdpt = ensure_next_table((uint64_t*)pml4, PML4_INDEX(virt));
+    if (!pdpt) return;
+    uint64_t* pd = ensure_next_table(pdpt, PDPT_INDEX(virt));
+    if (!pd) return;
+    uint64_t* pt = ensure_next_table(pd, PD_INDEX(virt));
+    if (!pt) return;
+
     uint64_t irq_flags = spin_lock_irqsave(&vmm_lock);
-    uint64_t* pdpt = get_next_table((uint64_t*)pml4, PML4_INDEX(virt), 1);
-    uint64_t* pd   = get_next_table(pdpt, PDPT_INDEX(virt), 1);
-    uint64_t* pt   = get_next_table(pd, PD_INDEX(virt), 1);
-    
     pt[PT_INDEX(virt)] = (phys & ~0xFFFULL) | flags | PAGE_PRESENT;
     spin_unlock_irqrestore(&vmm_lock, irq_flags);
 }
 
 void vmm_unmap(void* pml4, uint64_t virt) {
     uint64_t irq_flags = spin_lock_irqsave(&vmm_lock);
-    uint64_t* pdpt = get_next_table((uint64_t*)pml4, PML4_INDEX(virt), 0);
+    uint64_t* pdpt = get_existing_table((uint64_t*)pml4, PML4_INDEX(virt));
     if (!pdpt) { spin_unlock_irqrestore(&vmm_lock, irq_flags); return; }
-    uint64_t* pd   = get_next_table(pdpt, PDPT_INDEX(virt), 0);
+    uint64_t* pd   = get_existing_table(pdpt, PDPT_INDEX(virt));
     if (!pd) { spin_unlock_irqrestore(&vmm_lock, irq_flags); return; }
-    uint64_t* pt   = get_next_table(pd, PD_INDEX(virt), 0);
+    uint64_t* pt   = get_existing_table(pd, PD_INDEX(virt));
     if (!pt) { spin_unlock_irqrestore(&vmm_lock, irq_flags); return; }
     
     pt[PT_INDEX(virt)] = 0;
