@@ -16,6 +16,8 @@
 static uint64_t next_id = 1;
 static spinlock_t id_lock;
 
+#define TASK_DEFAULT_TIMESLICE 4
+
 void task_init_global() {
     next_id = 1;
     spin_init(&id_lock);
@@ -86,6 +88,7 @@ void task_init_per_cpu() {
     idle_task->kernel_rsp = 0;
     idle_task->stack_bottom = NULL;
     idle_task->user_stack_bottom = NULL;
+    idle_task->timeslice = 0;
     
     uint64_t cr3;
     __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
@@ -127,6 +130,7 @@ task_t* task_create(void (*entry)()) {
 
     new_task->rsp = (uint64_t)stack;
     new_task->state = TASK_READY;
+    new_task->timeslice = TASK_DEFAULT_TIMESLICE;
     
     cpu_t* target = pick_least_loaded_cpu();
     new_task->cpu_id = target->id;
@@ -169,6 +173,7 @@ task_t* task_create_user(void (*entry)()) {
 
     new_task->rsp = (uint64_t)stack;
     new_task->state = TASK_READY;
+    new_task->timeslice = TASK_DEFAULT_TIMESLICE;
     
     cpu_t* target = pick_least_loaded_cpu();
     new_task->cpu_id = target->id;
@@ -217,6 +222,7 @@ task_t* task_exec(void* elf_data) {
 
     new_task->rsp = (uint64_t)stack;
     new_task->state = TASK_READY;
+    new_task->timeslice = TASK_DEFAULT_TIMESLICE;
     
     cpu_t* target = pick_least_loaded_cpu();
     new_task->cpu_id = target->id;
@@ -270,6 +276,7 @@ static task_t* task_steal() {
 uint64_t task_schedule(uint64_t current_rsp) {
     cpu_t* cpu = get_cpu();
     if (!cpu->current_task) return current_rsp;
+    cpu->need_resched = 0;
 
     cpu->current_task->rsp = current_rsp;
     
@@ -310,6 +317,7 @@ uint64_t task_schedule(uint64_t current_rsp) {
 
     cpu->current_task = next;
     cpu->current_task->state = TASK_RUNNING;
+    cpu->current_task->timeslice = (cpu->current_task->id == 0) ? 0 : TASK_DEFAULT_TIMESLICE;
 
     tss_set_rsp0(cpu->current_task->kernel_rsp);
     syscall_set_kernel_stack(cpu->current_task->kernel_rsp);
@@ -319,5 +327,45 @@ uint64_t task_schedule(uint64_t current_rsp) {
 }
 
 void task_yield() {
+    task_request_reschedule();
     __asm__ volatile ("int $32"); 
+}
+
+void task_request_reschedule() {
+    cpu_t* cpu = get_cpu();
+    cpu->need_resched = 1;
+}
+
+int task_needs_schedule() {
+    cpu_t* cpu = get_cpu();
+    return cpu->need_resched;
+}
+
+void task_timer_tick() {
+    cpu_t* cpu = get_cpu();
+    task_t* current = cpu->current_task;
+    if (!current) {
+        cpu->need_resched = 1;
+        return;
+    }
+
+    if (current->state != TASK_RUNNING) {
+        cpu->need_resched = 1;
+        return;
+    }
+
+    if (current->id == 0) {
+        if (cpu->runqueue.count != 0) {
+            cpu->need_resched = 1;
+        }
+        return;
+    }
+
+    if (current->timeslice > 0) {
+        current->timeslice--;
+    }
+
+    if (current->timeslice == 0) {
+        cpu->need_resched = 1;
+    }
 }
