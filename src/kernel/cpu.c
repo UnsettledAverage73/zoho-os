@@ -31,6 +31,7 @@ void cpu_early_init() {
     cpu->self = cpu;
     cpu->kernel_stack = 0;
     cpu->user_stack = 0;
+    cpu->need_resched = 0;
 
     uint64_t flags = spin_lock_irqsave(&cpu_lock);
     cpus[cpu_count++] = cpu;
@@ -50,6 +51,7 @@ void cpu_init(uint8_t apic_id) {
     cpu->self = cpu;
     cpu->kernel_stack = 0;
     cpu->user_stack = 0;
+    cpu->need_resched = 0;
 
     uint64_t flags = spin_lock_irqsave(&cpu_lock);
     cpus[cpu_count++] = cpu;
