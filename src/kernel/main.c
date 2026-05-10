@@ -24,6 +24,11 @@
 #include "keyboard.h"
 #include "window.h"
 #include "string.h"
+#include "pci.h"
+#include "net.h"
+#include "e1000.h"
+#include "dhcp.h"
+#include "tcp.h"
 
 void kmain(unsigned long magic, unsigned long addr) {
     (void)magic;
@@ -32,6 +37,7 @@ void kmain(unsigned long magic, unsigned long addr) {
     cpu_early_init();
     serial_init();
     vga_clear();
+    klog_set_level(LOG_DEBUG);
     klog(LOG_INFO, "KERNEL", "Zoho OS Booting...");
     
     pmm_init(mb_info);
@@ -64,6 +70,7 @@ void kmain(unsigned long magic, unsigned long addr) {
     task_init_per_cpu();
     syscall_init();
     
+    pci_init();
     smp_init();
 
     if (ata_init() == 0) {
@@ -88,19 +95,23 @@ void kmain(unsigned long magic, unsigned long addr) {
     window_init();
 
     // Create a terminal window for the shell
-    window_t* shell_win = window_create(50, 50, 600, 400, 0xFF000000); 
+    window_t* shell_win = window_create(50, 50, 600, 400, 0xFF333333); 
     shell_win->buffer = kmalloc(600 * 375 * 4); // 400 - 25 = 375
     memset(shell_win->buffer, 0, 600 * 375 * 4);
     shell_set_window(shell_win);
+    net_init();
+    dhcp_init();
+    tcp_init();
     shell_init();
+    
+    dhcp_discover();
     
     klog(LOG_INFO, "KERNEL", "System stabilized on LAPIC Timer. Starting scheduler...");
 
     while(1) {
+        serial_poll_input();
+        e1000_poll();
         window_update();
-        if (window_needs_redraw()) {
-            window_draw_all();
-        }
-        for(volatile int i=0; i<100000; i++);
+        window_draw_all();
     }
 }
