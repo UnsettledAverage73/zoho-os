@@ -1,0 +1,309 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{array}
+
+% Colors for code highlighting
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{
+    \Huge \textbf{Zoho OS} \\
+    \large \textit{Building a 64-bit Operating System from Scratch} \\
+    \vspace{1cm}
+    \normalsize Technical Documentation \& Architectural Blueprint
+}
+\author{
+    \textbf{Atharva Bodade} \\
+    \small Shri Sant Gajanan Maharaj College of Engineering, Shegaon \\
+    \vspace{0.5cm}
+    \small \url{https://github.com/UnsettledAverage73/zoho-os}
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\chapter{Project Introduction: The Core Philosophy}
+\section{The Vision: From Silicon to Software}
+When you turn on your computer, a miracle happens. In less than 10 seconds, a piece of silicon and metal turns into a workspace. This project, \textbf{Zoho OS}, is the journey of building that miracle from the ground up. We are not using pre-made kernels, third-party libraries, or existing operating systems as a base; we are communicating directly with the hardware at the most fundamental level.
+
+The source code for this project is available at: \\
+\url{https://github.com/UnsettledAverage73/zoho-os}
+
+The philosophy behind Zoho OS is \textit{"Total Understanding."} By writing every line of code—from the bootloader handshake to the graphical user interface—we eliminate the "black boxes" of modern computing and reclaim control over the machine.
+
+\section{The Core Objectives}
+The objective is to create a functional, high-performance, 64-bit monolithic operating system. The project focuses on several key technical pillars:
+\begin{itemize}
+    \item \textbf{Bare-Metal Execution:} Running directly on the hardware without any underlying abstraction layer.
+    \item \textbf{Modern Graphics Architecture:} Implementing a high-resolution linear framebuffer to support millions of colors and smooth animations.
+    \item \textbf{Symmetric Multi-Processing (SMP):} Utilizing all available CPU cores to enable true parallel execution.
+    \item \textbf{Advanced Memory Management:} Implementing 4-level paging to provide every process with a secure, 64-bit virtual address space.
+    \item \textbf{Custom System Logic:} Building our own interrupt handlers, task schedulers, and I/O drivers.
+\end{itemize}
+
+\chapter{Architecture \& Design}
+\section{The Kitchen Analogy}
+To understand the kernel, we use the analogy of a restaurant:
+\begin{itemize}
+    \item \textbf{The Hardware (Kitchen):} The stove and ingredients. It has power but no direction.
+    \item \textbf{The Apps (Customers):} They want results but don't know how to use the hardware.
+    \item \textbf{The Kernel (The Chef):} This is Zoho OS. It manages the hardware resources to serve the applications safely and efficiently.
+\end{itemize}
+
+\section{The Folder Structure}
+The project is organized to separate the low-level "starting" code from the high-level "operating" code.
+\begin{itemize}
+    \item \textbf{src/boot/:} The "First Responders." Contains .asm files that wake up the CPU and transition to 64-bit mode.
+    \item \textbf{src/kernel/:} The "Engine Room." Contains .c and .asm files for core logic: memory management, task switching, and hardware drivers.
+    \item \textbf{include/kernel/:} The "Blueprint." Contains .h files defining structures and function signatures.
+    \item \textbf{isodir/:} The "Packaging." Temporary folder used to create the final .iso file.
+    \item \textbf{Makefile:} The "Recipe" that tells the computer how to compile everything.
+    \item \textbf{linker.ld:} The "Map" that tells the compiler where each piece of code lives in RAM.
+\end{itemize}
+
+\section{The Tech Stack}
+\begin{itemize}
+    \item \textbf{x86\_64 Assembly (NASM):} For code C cannot do (like talking directly to CPU registers).
+    \item \textbf{C (GCC):} For 99\% of kernel logic. Used in "Freestanding" mode (no standard library).
+    \item \textbf{Build System:} GNU Make. Automates the compilation process.
+    \item \textbf{Boot Protocol:} Multiboot2. Standardized way for GRUB to hand over control.
+    \item \textbf{Emulation:} QEMU. A virtual computer used to test the OS.
+\end{itemize}
+
+\chapter{Phase 1: Bootstrapping \& 64-bit Transition}
+\section{The Multiboot2 Header (src/boot/header.asm)}
+When a computer turns on, it runs firmware (BIOS/UEFI) which looks for a Bootloader (like GRUB). GRUB looks for a specific signature called a Multiboot2 Header.
+
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=src/boot/header.asm]
+section .multiboot_header
+header_start:
+    ; Magic number (multiboot 2)
+    dd 0xe85250d6
+    ; Architecture 0 (protected mode i386)
+    dd 0
+    ; Header length
+    dd header_end - header_start
+    ; Checksum
+    dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
+
+    ; Framebuffer tag request
+    align 8
+    dw 5    ; type
+    dw 0    ; flags
+    dd 20   ; size
+    dd 1024 ; width
+    dd 768  ; height
+    dd 32   ; depth
+
+    ; End tag
+    align 8
+    dw 0
+    dw 0
+    dd 8
+header_end:
+\end{lstlisting}
+
+\subsection{Line-by-Line Breakdown}
+\begin{itemize}
+    \item \textbf{section .multiboot\_header:} Tells the linker to put this at the very beginning of the binary.
+    \item \textbf{dd 0xe85250d6:} The Magic Number for Multiboot2.
+    \item \textbf{dd 0:} Architecture flag (32-bit protected mode).
+    \item \textbf{dd 0x100000000 - (...):} Checksum to verify the header is not corrupted.
+    \item \textbf{Framebuffer Tag:} Requests GRUB to set up a 1024x768 graphics mode.
+\end{itemize}
+
+\section{The 32-bit Entry \& Environment Checks (src/boot/main.asm)}
+GRUB jumps to the label \textit{start}. We are now in 32-bit Protected Mode.
+
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=src/boot/main.asm]
+global start
+extern long_mode_start
+section .text
+bits 32
+start:
+    cli                 ; 1. Disable interrupts
+    mov esp, stack_top  ; 2. Set up a stack
+    
+    ; Preserve multiboot info early!
+    mov edi, eax        ; Magic number
+    mov esi, ebx        ; Pointer to multiboot info structure
+
+    call check_cpuid
+    call check_long_mode
+    call setup_page_tables
+    call enable_paging
+    lgdt [gdt64.pointer]
+    jmp gdt64.code:long_mode_start
+\end{lstlisting}
+
+\subsection{Breakdown}
+\begin{itemize}
+    \item \textbf{cli:} Disables interrupts as we don't have an IDT yet.
+    \item \textbf{mov esp, stack\_top:} Sets up a 16KB stack for C functions.
+    \item \textbf{Preserving eax and ebx:} Saves Multiboot info passed by GRUB into registers for later use in C.
+    \item \textbf{check\_cpuid / check\_long\_mode:} Verifies the CPU supports 64-bit mode.
+    \item \textbf{setup\_page\_tables:} Creates identity-mapped page tables.
+    \item \textbf{enable\_paging:} Flips bits in CR0, CR4, and EFER to enable Long Mode.
+    \item \textbf{jmp gdt64.code:long\_mode\_start:} A "Far Jump" to switch the CPU to 64-bit mode.
+\end{itemize}
+
+\section{Transition to 64-bit (src/boot/long\_mode\_init.asm)}
+This is the first file where we use 64-bit instructions.
+
+\begin{lstlisting}[language={[x86masm]Assembler}, caption=src/boot/long\_mode\_init.asm]
+global long_mode_start
+extern kmain
+section .text
+bits 64
+long_mode_start:
+    ; 1. Nullify Data Segment Registers
+    mov ax, 0
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; 2. Print 'OK' to VGA
+    mov rax, 0x0f4b0f4f
+    mov [0xb8000], rax
+
+    ; 3. The Big Leap
+    call kmain
+    hlt
+\end{lstlisting}
+
+\chapter{Phase 2: Kernel Initialization}
+Welcome to the brain of the operating system. We have successfully crossed from Assembly into the structured world of C.
+
+\section{kmain() - The Orchestrator}
+In \textit{src/kernel/main.c}, \textit{kmain()} wakes up every part of the computer in the correct order.
+
+\begin{lstlisting}[language=C, caption=src/kernel/main.c]
+void kmain(unsigned long magic, unsigned long addr) {
+    struct multiboot_info* mb_info = (struct multiboot_info*)addr;
+    
+    cpu_early_init();
+    serial_init();
+    vga_clear();
+    klog_set_level(LOG_DEBUG);
+    klog(LOG_INFO, "KERNEL", "Zoho OS Booting...");
+
+    pmm_init(mb_info);
+    vmm_init();
+    kmalloc_init();
+
+    gdt_init();
+    idt_init_global();
+    idt_init_per_cpu();
+
+    __asm__ volatile ("sti"); // Enable Interrupts
+    
+    while(1) {
+        serial_poll_input();
+        e1000_poll();
+        window_update();
+        window_draw_all();
+    }
+}
+\end{lstlisting}
+
+\chapter{Phase 3: Hardware Interrupts \& IDT}
+An Interrupt is like a phone call. It can be a hardware event (key press) or a software emergency (division by zero).
+
+\section{The Interrupt Descriptor Table (IDT)}
+The IDT acts as a "Phone Directory" with 256 entries. Each entry tells the CPU where to jump when an interrupt happens.
+
+\begin{lstlisting}[language=C, caption=include/kernel/idt.h]
+struct idt_entry {
+    uint16_t offset_low;    // Lower 16 bits of handler address
+    uint16_t selector;      // Code segment selector (GDT)
+    uint8_t ist;            // Interrupt Stack Table
+    uint8_t type_attr;      // Flags (present, ring level)
+    uint16_t offset_middle; // Middle 16 bits
+    uint32_t offset_high;   // Upper 32 bits
+    uint32_t reserved;
+} __attribute__((packed));
+\end{lstlisting}
+
+\chapter{Phase 4: Memory Management}
+Memory management is divided into three layers:
+\begin{enumerate}
+    \item \textbf{Physical Memory Management (PMM):} Managing physical RAM frames (4KB chunks).
+    \item \textbf{Virtual Memory Management (VMM):} Creating virtual addresses and 4-level page tables (PML4, PDPT, PD, PT).
+    \item \textbf{Kernel Heap (kmalloc):} Providing dynamic allocation for small chunks of memory.
+\end{enumerate}
+
+\chapter{Phase 5: Multitasking \& Multiprocessing}
+\section{Symmetric Multi-Processing (SMP)}
+We use ACPI MADT tables to find all CPU cores and wake them up using a "Trampoline" code (started in 16-bit real mode) and IPI (Inter-Processor Interrupts).
+
+\section{Task Management}
+Every program is represented by a \textit{task\_t} struct (Process Control Block). Context switching involves saving the current CPU state and loading the state of the next task by swapping the \textit{RSP} (Stack Pointer) register.
+
+\chapter{The Build System and Packaging}
+The Makefile automates the entire process:
+\begin{enumerate}
+    \item \textbf{Compiling:} Converts .c and .asm files into .o object files.
+    \item \textbf{Linking:} Glues object files into \textit{kernel.bin} using \textit{linker.ld}.
+    \item \textbf{ISO Creation:} Packages the kernel and GRUB config into a bootable .iso using \textit{grub-mkrescue}.
+\end{enumerate}
+
+\chapter{Summary of the Total Picture}
+\begin{center}
+\begin{tabular}{|m{3cm}|m{2.5cm}|m{8cm}|}
+\hline
+\textbf{Concept} & \textbf{File} & \textbf{Purpose} \\
+\hline
+System Calls & syscall.c & Lets user apps talk to the kernel safely. \\
+\hline
+PCI Scanning & pci.c & Finds hardware (NIC, Sound, Disk). \\
+\hline
+Linking & linker.ld & Arranges code in RAM correctly. \\
+\hline
+Shell & shell.c & The command-line interface for the user. \\
+\hline
+String Lib & string.c & Manual versions of memcpy, strlen, etc. \\
+\hline
+\end{tabular}
+\end{center}
+
+\chapter{Conclusion}
+From the first line of Assembly to a fully functional GUI, we have explored the entire lifecycle of an Operating System. Zoho OS demonstrates the fundamental "magic" that happens every time a computer is powered on.
+
+\end{document}
