@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "window.h"
+#include "task.h"
 
 void syscall_init();
 void syscall_set_kernel_stack(uint64_t stack);
@@ -16,6 +17,21 @@ int sys_write(int fd, const void* buffer, uint32_t count);
 void sys_close(int fd);
 uint32_t sys_exec(const char* path);
 void sys_yield();
+uint64_t sys_fork();
 uint64_t sys_free_frames();
+
+typedef struct {
+    uint64_t total_frames;
+    uint64_t free_frames;
+    uint32_t cpu_count;
+    struct {
+        uint64_t total_ticks;
+        uint64_t idle_ticks;
+    } cpus[16];
+    uint32_t task_count;
+} sys_info_t;
+
+int sys_get_sys_info(sys_info_t* info);
+int sys_get_tasks(task_info_t* tasks, uint32_t max_tasks);
 
 #endif

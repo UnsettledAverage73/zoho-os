@@ -94,8 +94,34 @@ void sys_yield() {
     task_yield();
 }
 
+uint64_t sys_fork() {
+    return task_fork();
+}
+
 uint64_t sys_free_frames() {
     return pmm_get_free_count();
+}
+
+int sys_get_sys_info(sys_info_t* info) {
+    info->total_frames = pmm_get_total_frames();
+    info->free_frames = pmm_get_free_count();
+    info->cpu_count = cpu_get_count();
+    for (uint32_t i = 0; i < info->cpu_count && i < 16; i++) {
+        cpu_t* cpu = cpu_get_by_index(i);
+        info->cpus[i].total_ticks = cpu->total_ticks;
+        info->cpus[i].idle_ticks = cpu->idle_ticks;
+    }
+    // For task_count, we'll just sum them up for now
+    info->task_count = 0;
+    for (uint32_t i = 0; i < info->cpu_count; i++) {
+        cpu_t* cpu = cpu_get_by_index(i);
+        info->task_count += cpu->runqueue.count + 1; // +1 for current task
+    }
+    return 0;
+}
+
+int sys_get_tasks(task_info_t* tasks, uint32_t max_tasks) {
+    return task_get_all_info(tasks, max_tasks);
 }
 
 uint64_t syscall_handler_c(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) {
@@ -111,6 +137,9 @@ uint64_t syscall_handler_c(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t 
         case 8: return sys_exec((const char*)arg1);
         case 9: sys_yield(); return 0;
         case 10: return sys_free_frames();
+        case 11: return sys_get_sys_info((sys_info_t*)arg1);
+        case 12: return sys_get_tasks((task_info_t*)arg1, (uint32_t)arg2);
+        case 13: return sys_fork();
         default: return 0xFFFFFFFFFFFFFFFF;
     }
 }
