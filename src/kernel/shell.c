@@ -15,6 +15,7 @@
 #include "e1000.h"
 
 #include "tcp.h"
+#include "syscall.h"
 
 #define MAX_BUFFER 256
 #define SHELL_CHAR_W 8
@@ -221,7 +222,68 @@ static void shell_print_lock_stats() {
 
 static void shell_execute(char* cmd) {
     if (strcmp(cmd, "help") == 0) {
-        shell_print("Available commands: help, ls, cat <file>, write <f> <t>, exec <f>, free, heap, locks, clear, ticks, gui, net, ping <ip>, udp <msg>, tcp <ip> <port>, stress_proc, stress_disk\n");
+        shell_print("Available commands: help, ls, cat <file>, write <f> <t>, exec <f>, free, heap, locks, clear, ticks, gui, net, ping <ip>, udp <msg>, tcp <ip> <port>, stress_proc, stress_disk, monitor, top, dashboard\n");
+    } else if (strcmp(cmd, "dashboard") == 0) {
+        extern void dashboard_run();
+        task_create(dashboard_run);
+        shell_print("Dashboard started.\n");
+    } else if (strcmp(cmd, "monitor") == 0) {
+        sys_info_t info;
+        sys_get_sys_info(&info);
+        
+        shell_print("--- System Monitor ---\n");
+        shell_print("CPU Cores: "); shell_print_dec(info.cpu_count); shell_print("\n");
+        for (uint32_t i = 0; i < info.cpu_count; i++) {
+            shell_print(" CPU "); shell_print_dec(i);
+            shell_print(": Usage ");
+            if (info.cpus[i].total_ticks > 0) {
+                uint64_t busy = info.cpus[i].total_ticks - info.cpus[i].idle_ticks;
+                uint64_t usage = (busy * 100) / info.cpus[i].total_ticks;
+                shell_print_dec(usage);
+                shell_print("%");
+            } else {
+                shell_print("0%");
+            }
+            shell_print("\n");
+        }
+        
+        uint64_t total_mem = info.total_frames * 4096 / 1024;
+        uint64_t free_mem = info.free_frames * 4096 / 1024;
+        shell_print("Memory: "); shell_print_dec((total_mem - free_mem) / 1024);
+        shell_print("MB / "); shell_print_dec(total_mem / 1024); shell_print("MB used\n");
+        shell_print("Tasks: "); shell_print_dec(info.task_count); shell_print("\n");
+    } else if (strcmp(cmd, "top") == 0) {
+        task_info_t tasks[32];
+        int count = sys_get_tasks(tasks, 32);
+        
+        shell_print("ID  CPU  TICKS  STATE\n");
+        for (int i = 0; i < count; i++) {
+            shell_print_dec(tasks[i].id); shell_print("   ");
+            shell_print_dec(tasks[i].cpu_id); shell_print("    ");
+            shell_print_dec(tasks[i].total_ticks); shell_print("    ");
+            switch(tasks[i].state) {
+                case 0: shell_print("READY"); break;
+                case 1: shell_print("RUNNING"); break;
+                case 2: shell_print("EXITED"); break;
+                default: shell_print("UNKNOWN"); break;
+            }
+            shell_print("\n");
+        }
+    } else if (strcmp(cmd, "fork") == 0) {
+        shell_print("Forking...\n");
+        uint64_t pid = sys_fork();
+        if (pid == 0) {
+            // Child
+            serial_print("Child process started\n");
+            for (volatile int i = 0; i < 10000000; i++);
+            serial_print("Child process exiting\n");
+            sys_exit(0);
+        } else {
+            // Parent
+            shell_print("Parent: Child PID is ");
+            shell_print_dec(pid);
+            shell_print("\n");
+        }
     } else if (memcmp(cmd, "tcp ", 4) == 0) {
         char* rest = cmd + 4;
         uint8_t ip[4] = {0, 0, 0, 0};
