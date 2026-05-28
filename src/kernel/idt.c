@@ -8,6 +8,9 @@
 #include "klog.h"
 #include "mouse.h"
 #include "apic.h"
+#include "vmm.h"
+#include "pmm.h"
+#include "string.h"
 
 extern void pit_handler();
 
@@ -123,10 +126,59 @@ static const char* exception_messages[] = {
     "Reserved"
 };
 
+static uint64_t handle_page_fault(struct interrupt_frame* frame) {
+    uint64_t cr2;
+    __asm__ volatile ("mov %%cr2, %0" : "=r"(cr2));
+    
+    cpu_t* cpu = get_cpu();
+    if (!cpu->current_task) return (uint64_t)frame;
+
+    uint64_t flags = vmm_get_flags(cpu->current_task->pml4, cr2);
+    
+    // Check if it's a write fault (ERR bit 1) and the page is CoW
+    if ((frame->error_code & 2) && (flags & PAGE_COW)) {
+        uint64_t old_phys = vmm_get_phys(cpu->current_task->pml4, cr2) & ~0xFFFULL;
+        
+        if (pmm_get_ref((void*)old_phys) > 1) {
+            // Split: allocate new frame and copy
+            void* new_frame = pmm_alloc_frame();
+            // We need to access the physical memory. 
+            // Since we don't have a physical map, we'll use a temporary mapping or 
+            // rely on the fact that the page is currently mapped in the current address space.
+            memcpy(new_frame, (void*)(cr2 & ~0xFFFULL), 4096);
+            
+            // Map new frame as writable, removing CoW bit
+            uint64_t new_flags = (flags & ~PAGE_COW) | PAGE_WRITABLE;
+            vmm_map(cpu->current_task->pml4, cr2 & ~0xFFFULL, (uint64_t)new_frame, new_flags);
+            
+            // Free the old frame (dec ref count)
+            pmm_free_frame((void*)old_phys);
+        } else {
+            // We are the last owner, just make it writable
+            uint64_t new_flags = (flags & ~PAGE_COW) | PAGE_WRITABLE;
+            vmm_map(cpu->current_task->pml4, cr2 & ~0xFFFULL, old_phys, new_flags);
+        }
+        return (uint64_t)frame;
+    }
+
+    klog(LOG_ERROR, "MEM", "Unhandled Page Fault at %p (ERR: %x)", cr2, frame->error_code);
+    if ((frame->cs & 3) == 3) {
+        klog(LOG_ERROR, "TASK", "Terminating process %d due to segfault", cpu->current_task->id);
+        cpu->current_task->state = TASK_EXITED;
+        return task_schedule((uint64_t)frame);
+    }
+
+    while(1) __asm__("hlt");
+}
+
 uint64_t isr_handler(struct interrupt_frame* frame) {
     uint64_t rsp = (uint64_t)frame;
 
     if (frame->int_no < 32) {
+        if (frame->int_no == 14) {
+            return handle_page_fault(frame);
+        }
+
         // Special case: User Mode exception (e.g. Page Fault)
         if ((frame->cs & 3) == 3) {
             klog(LOG_ERROR, "KERNEL", "User process violation! Terminating.");
