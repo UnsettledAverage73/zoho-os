@@ -40,9 +40,8 @@ void graphics_init(struct multiboot_tag_framebuffer* tag) {
     uint64_t cr3;
     __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
     
-    for (uint64_t i = 0; i < fb_size; i += 4096) {
-        vmm_map((void*)cr3, fb_addr + i, phys_addr + i, PAGE_WRITABLE | PAGE_PRESENT | (1 << 3) | (1 << 4)); // PWT | PCD
-    }
+    // Use optimized range mapping (supports huge pages automatically)
+    vmm_map_range((void*)cr3, fb_addr, phys_addr, fb_size, PAGE_WRITABLE | PAGE_PRESENT | (1 << 3) | (1 << 4)); // PWT | PCD
     
     // Reload CR3
     __asm__ volatile ("mov %%cr3, %%rax\nmov %%rax, %%cr3" ::: "rax");
@@ -209,6 +208,16 @@ void graphics_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t
     for (uint32_t i = 0; i < h; i++) {
         for (uint32_t j = 0; j < w; j++) {
             graphics_put_pixel(x + j, y + i, color);
+        }
+    }
+}
+
+void graphics_fill_rect_buffer(uint32_t* buf, uint32_t buf_w, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
+    if (!buf) return;
+    for (uint32_t i = 0; i < h; i++) {
+        uint32_t* row = buf + (uint64_t)(y + i) * buf_w + x;
+        for (uint32_t j = 0; j < w; j++) {
+            row[j] = color;
         }
     }
 }
