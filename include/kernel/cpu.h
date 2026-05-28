@@ -14,6 +14,9 @@ typedef struct cpu {
     uint8_t need_resched;   // 0x21
     uint8_t pad[6];
 
+    uint64_t total_ticks;
+    uint64_t idle_ticks;
+
     struct {
         struct gdt_entry entries[5];
         struct gdt_tss_entry tss;

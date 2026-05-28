@@ -21,6 +21,7 @@ typedef struct task {
     task_state_t state;
     int cpu_id; 
     uint32_t timeslice;
+    uint64_t total_ticks;
     struct task* next;
 } task_t;
 
@@ -31,16 +32,25 @@ typedef struct {
     uint32_t count;
 } runqueue_t;
 
+typedef struct {
+    uint64_t id;
+    uint32_t cpu_id;
+    uint64_t total_ticks;
+    uint32_t state;
+} task_info_t;
+
 void task_init_global();
 void task_init_per_cpu();
 task_t* task_create(void (*entry)());
 task_t* task_create_user(void (*entry)());
 task_t* task_exec(void* elf_data);
 task_t* task_exec_file(const char* path);
+uint64_t task_fork();
 void task_yield();
 void task_timer_tick();
 int task_needs_schedule();
 void task_request_reschedule();
 uint64_t task_schedule(uint64_t current_rsp);
+int task_get_all_info(task_info_t* tasks, uint32_t max_tasks);
 
 #endif

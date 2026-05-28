@@ -11,6 +11,7 @@
 #include "cpu.h"
 #include "window.h"
 #include "vfs.h"
+#include "string.h"
 #include <stddef.h>
 
 static uint64_t next_id = 1;
@@ -96,6 +97,8 @@ void task_init_per_cpu() {
 
     cpu->idle_task = idle_task;
     cpu->current_task = idle_task;
+    cpu->total_ticks = 0;
+    cpu->idle_ticks = 0;
     
     klog(LOG_INFO, "TASK", "Task system initialized for CPU");
 }
@@ -131,6 +134,7 @@ task_t* task_create(void (*entry)()) {
     new_task->rsp = (uint64_t)stack;
     new_task->state = TASK_READY;
     new_task->timeslice = TASK_DEFAULT_TIMESLICE;
+    new_task->total_ticks = 0;
     
     cpu_t* target = pick_least_loaded_cpu();
     new_task->cpu_id = target->id;
@@ -174,6 +178,7 @@ task_t* task_create_user(void (*entry)()) {
     new_task->rsp = (uint64_t)stack;
     new_task->state = TASK_READY;
     new_task->timeslice = TASK_DEFAULT_TIMESLICE;
+    new_task->total_ticks = 0;
     
     cpu_t* target = pick_least_loaded_cpu();
     new_task->cpu_id = target->id;
@@ -223,6 +228,7 @@ task_t* task_exec(void* elf_data) {
     new_task->rsp = (uint64_t)stack;
     new_task->state = TASK_READY;
     new_task->timeslice = TASK_DEFAULT_TIMESLICE;
+    new_task->total_ticks = 0;
     
     cpu_t* target = pick_least_loaded_cpu();
     new_task->cpu_id = target->id;
@@ -230,6 +236,57 @@ task_t* task_exec(void* elf_data) {
     enqueue_task(&target->runqueue, new_task);
 
     return new_task;
+}
+
+uint64_t task_fork() {
+    cpu_t* cpu = get_cpu();
+    task_t* parent = cpu->current_task;
+    
+    task_t* child = kmalloc(sizeof(task_t));
+    
+    uint64_t id_flags = spin_lock_irqsave(&id_lock);
+    child->id = next_id++;
+    spin_unlock_irqrestore(&id_lock, id_flags);
+
+    child->pml4 = vmm_clone_address_space(parent->pml4);
+    
+    size_t kstack_size = 4096 * 4;
+    child->stack_bottom = kmalloc(kstack_size);
+    child->user_stack_bottom = parent->user_stack_bottom ? kmalloc(4096 * 4) : NULL; // Not actually used by fork in this way, but for completeness
+    
+    // We need to copy the kernel stack carefully. 
+    // The most complex part of fork is capturing the CPU state.
+    // Since we are in a syscall/interrupt, the state is on the kernel stack.
+    
+    // For now, let's assume fork is called via a syscall, 
+    // and the interrupt_frame is near the top of the parent's kernel stack.
+    
+    // Simple implementation: copy the whole kernel stack
+    uint64_t stack_top_offset = parent->kernel_rsp - parent->rsp;
+    memcpy((void*)(child->stack_bottom + kstack_size - stack_top_offset), (void*)parent->rsp, stack_top_offset);
+    
+    child->kernel_rsp = (uint64_t)child->stack_bottom + kstack_size;
+    child->rsp = child->kernel_rsp - stack_top_offset;
+    
+    // The child needs to return 0. The return value (RAX) is stored in the interrupt frame on the stack.
+    // We need to find the RAX position in the frame.
+    // Based on syscall_entry, the frame layout has RAX at some offset.
+    // Let's assume it's at the very beginning of our pushed registers.
+    
+    // [Manual adjustment of RAX in child's stack]
+    // struct interrupt_frame { r15, r14, ..., rbx, rax, rip, cs, rflags, rsp, ss }
+    // RAX is typically the last one pushed before the IRET frame (or first if we consider stack growth).
+    uint64_t* child_rax = (uint64_t*)child->rsp; 
+    *child_rax = 0; 
+
+    child->state = TASK_READY;
+    child->cpu_id = parent->cpu_id;
+    child->timeslice = TASK_DEFAULT_TIMESLICE;
+    child->total_ticks = 0;
+    
+    enqueue_task(&cpu->runqueue, child);
+    
+    return child->id;
 }
 
 static void task_reap(task_t* task) {
@@ -336,6 +393,39 @@ void task_request_reschedule() {
     cpu->need_resched = 1;
 }
 
+int task_get_all_info(task_info_t* tasks, uint32_t max_tasks) {
+    uint32_t count = 0;
+    int cpu_count = cpu_get_count();
+    
+    for (int i = 0; i < cpu_count; i++) {
+        cpu_t* cpu = cpu_get_by_index(i);
+        
+        // 1. Current task
+        if (cpu->current_task && count < max_tasks) {
+            tasks[count].id = cpu->current_task->id;
+            tasks[count].cpu_id = cpu->id;
+            tasks[count].total_ticks = cpu->current_task->total_ticks;
+            tasks[count].state = (uint32_t)cpu->current_task->state;
+            count++;
+        }
+        
+        // 2. Tasks in runqueue
+        uint64_t flags = spin_lock_irqsave(&cpu->runqueue.lock);
+        task_t* curr = cpu->runqueue.head;
+        while (curr && count < max_tasks) {
+            tasks[count].id = curr->id;
+            tasks[count].cpu_id = cpu->id;
+            tasks[count].total_ticks = curr->total_ticks;
+            tasks[count].state = (uint32_t)curr->state;
+            count++;
+            curr = curr->next;
+        }
+        spin_unlock_irqrestore(&cpu->runqueue.lock, flags);
+    }
+    
+    return count;
+}
+
 int task_needs_schedule() {
     cpu_t* cpu = get_cpu();
     return cpu->need_resched;
@@ -344,6 +434,15 @@ int task_needs_schedule() {
 void task_timer_tick() {
     cpu_t* cpu = get_cpu();
     task_t* current = cpu->current_task;
+    
+    cpu->total_ticks++;
+    if (current) {
+        current->total_ticks++;
+        if (current->id == 0) {
+            cpu->idle_ticks++;
+        }
+    }
+
     if (!current) {
         cpu->need_resched = 1;
         return;

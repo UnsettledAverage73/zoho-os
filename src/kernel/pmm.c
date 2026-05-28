@@ -7,6 +7,8 @@
 static uint32_t frame_bitmap[MAX_FRAMES / 32];
 static uint64_t free_stack[MAX_FRAMES];
 static int stack_ptr = -1;
+static uint32_t ref_counts[MAX_FRAMES];
+static uint64_t total_frames = 0;
 static spinlock_t pmm_lock;
 
 extern uint8_t kernel_start[];
@@ -29,10 +31,11 @@ void pmm_init(struct multiboot_info* mb_info) {
     uint64_t flags = spin_lock_irqsave(&pmm_lock);
 
     for (int i = 0; i < MAX_FRAMES / 32; i++) frame_bitmap[i] = 0xFFFFFFFF;
-    stack_ptr = -1;
+    for (int i = 0; i < MAX_FRAMES; i++) ref_counts[i] = 0;
 
     struct multiboot_tag* tag;
     uint64_t mbi_end = (uint64_t)mb_info + mb_info->total_size;
+    uint64_t max_addr = 0;
 
     for (tag = (struct multiboot_tag*)mb_info->tags;
          tag->type != MULTIBOOT_TAG_TYPE_END;
@@ -49,6 +52,7 @@ void pmm_init(struct multiboot_info* mb_info) {
                         uint64_t frame = addr / PAGE_SIZE;
                         if (frame < MAX_FRAMES) {
                             bitmap_unset(frame);
+                            if (addr + PAGE_SIZE > max_addr) max_addr = addr + PAGE_SIZE;
                         }
                     }
                 }
@@ -65,14 +69,26 @@ void pmm_init(struct multiboot_info* mb_info) {
         bitmap_set(addr / PAGE_SIZE);
     }
 
-    for (uint64_t f = 0; f < MAX_FRAMES; f++) {
+    // Optimization: Only scan up to the highest available address found
+    uint64_t max_frame = max_addr / PAGE_SIZE;
+    if (max_frame > MAX_FRAMES) max_frame = MAX_FRAMES;
+
+    for (uint64_t f = 0; f < max_frame; f++) {
         if (!bitmap_test(f)) {
             free_stack[++stack_ptr] = f * PAGE_SIZE;
+            total_frames++;
         }
     }
     
     spin_unlock_irqrestore(&pmm_lock, flags);
-    serial_print("PMM Initialized.\n");
+    serial_print("PMM Initialized. Total free frames: ");
+    // Note: serial_print doesn't support numbers easily in some versions, 
+    // but we'll stick to basic messages or implement a helper if needed.
+    serial_print("Done.\n");
+}
+
+uint64_t pmm_get_total_frames() {
+    return total_frames;
 }
 
 void* pmm_alloc_frame() {
@@ -83,6 +99,7 @@ void* pmm_alloc_frame() {
     }
     uint64_t addr = free_stack[stack_ptr--];
     bitmap_set(addr / PAGE_SIZE);
+    ref_counts[addr / PAGE_SIZE] = 1;
     spin_unlock_irqrestore(&pmm_lock, flags);
     return (void*)addr;
 }
@@ -91,11 +108,39 @@ void pmm_free_frame(void* frame) {
     uint64_t flags = spin_lock_irqsave(&pmm_lock);
     uint64_t addr = (uint64_t)frame;
     uint64_t f = addr / PAGE_SIZE;
-    if (bitmap_test(f)) {
-        bitmap_unset(f);
-        free_stack[++stack_ptr] = addr;
+    
+    if (f >= MAX_FRAMES) {
+        spin_unlock_irqrestore(&pmm_lock, flags);
+        return;
+    }
+
+    if (ref_counts[f] > 0) {
+        ref_counts[f]--;
+        if (ref_counts[f] == 0) {
+            if (bitmap_test(f)) {
+                bitmap_unset(f);
+                free_stack[++stack_ptr] = addr;
+            }
+        }
     }
     spin_unlock_irqrestore(&pmm_lock, flags);
+}
+
+void pmm_ref_inc(void* frame) {
+    uint64_t flags = spin_lock_irqsave(&pmm_lock);
+    uint64_t f = (uint64_t)frame / PAGE_SIZE;
+    if (f < MAX_FRAMES) {
+        ref_counts[f]++;
+    }
+    spin_unlock_irqrestore(&pmm_lock, flags);
+}
+
+uint32_t pmm_get_ref(void* frame) {
+    uint64_t flags = spin_lock_irqsave(&pmm_lock);
+    uint64_t f = (uint64_t)frame / PAGE_SIZE;
+    uint32_t count = (f < MAX_FRAMES) ? ref_counts[f] : 0;
+    spin_unlock_irqrestore(&pmm_lock, flags);
+    return count;
 }
 
 uint64_t pmm_get_free_count() {
