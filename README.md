@@ -1,6 +1,6 @@
 # Baseline kernel OS 🌌
 
-<video src="./docs/video/zoho.mp4" width="800" controls autoplay loop muted></video>
+<video src="docs/video/zoho.mp4" width="800" controls autoplay loop muted></video>
 *A minimal, high-performance 64-bit microkernel demonstration.*
 
 ---
