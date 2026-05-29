@@ -1,6 +1,6 @@
 # Zoho Setu Project 2026 - Project Submission
 
-## Baseline kernel OS 🌌
+## Baseline kernel OS 
 *A modular, high-performance 64-bit microkernel architecture developed for education and research.*
 
 <video src="zoho.mp4" width="800" controls autoplay loop muted></video>
