@@ -29,20 +29,28 @@
 #include "e1000.h"
 #include "dhcp.h"
 #include "tcp.h"
+#include "ktrace.h"
+#include "kstats.h"
+#include "tty.h"
+#include "xhci.h"
 
 void kmain(unsigned long magic, unsigned long addr) {
     (void)magic;
     struct multiboot_info* mb_info = (struct multiboot_info*)addr;
 
+    klog_set_level(LOG_DEBUG);
     cpu_early_init();
     serial_init();
     vga_clear();
-    klog_set_level(LOG_DEBUG);
+    tty_init();
     klog(LOG_INFO, "KERNEL", "Zoho OS Booting...");
     
     pmm_init(mb_info);
     vmm_init();
     kmalloc_init();
+
+    kstats_init();
+    ktrace_init();
 
     acpi_init();
 
@@ -71,6 +79,7 @@ void kmain(unsigned long magic, unsigned long addr) {
     syscall_init();
     
     pci_init();
+    xhci_init();
     smp_init();
 
     if (ata_init() == 0) {
