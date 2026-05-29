@@ -1,309 +1,434 @@
 \documentclass[12pt,a4paper]{report}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{geometry}
 \geometry{margin=1in}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage{hyperref}
-\usepackage{titlesec}
 \usepackage{graphicx}
-\usepackage{array}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, calc, fit, backgrounds}
+\usepackage{mdframed}
+\usepackage{amsmath}
+\usepackage{media9}
 
-% Colors for code highlighting
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+% Colors for the Mocha/Zoho theme
+\definecolor{zoho-bg}{HTML}{1E1E2E}
+\definecolor{zoho-blue}{HTML}{89B4FA}
+\definecolor{zoho-green}{HTML}{A6E3A1}
+\definecolor{zoho-red}{HTML}{F38BA8}
+\definecolor{zoho-text}{HTML}{CDD6F4}
 
-\lstdefinestyle{mystyle}{
-    backgroundcolor=\color{backcolour},   
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{magenta},
-    numberstyle=\tiny\color{codegray},
-    stringstyle=\color{codepurple},
-    basicstyle=\ttfamily\footnotesize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
-    showstringspaces=false,
-    showtabs=false,                  
-    tabsize=2
+\hypersetup{
+    colorlinks=true,
+    linkcolor=zoho-blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdfpagemode=FullScreen,
 }
 
-\lstset{style=mystyle}
+% Professional sidebar for "Ralph Observations"
+\newmdenv[
+  linecolor=zoho-blue,
+  linewidth=2pt,
+  leftmargin=10pt,
+  rightmargin=10pt,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=10pt,
+  innerbottommargin=10pt,
+  backgroundcolor=gray!10,
+  roundcorner=5pt
+]{ralphnote}
 
-\title{
-    \Huge \textbf{Zoho OS} \\
-    \large \textit{Building a 64-bit Operating System from Scratch} \\
-    \vspace{1cm}
-    \normalsize Technical Documentation \& Architectural Blueprint
+\newcommand{\ralph}[1]{
+    \begin{ralphnote}
+    \textit{\textbf{Observation:} #1}
+    \end{ralphnote}
 }
-\author{
-    \textbf{Atharva Bodade} \\
-    \small Shri Sant Gajanan Maharaj College of Engineering, Shegaon \\
-    \vspace{0.5cm}
-    \small \url{https://github.com/UnsettledAverage73/zoho-os}
-}
-\date{\today}
+
+\title{Zoho OS: Minimal 64-bit Microkernel}
+\author{Atharva Bodade}
+\date{May 2026}
 
 \begin{document}
 
-\maketitle
+% --- 1. COVER PAGE ---
+\begin{titlepage}
+    \thispagestyle{empty}
+    \begin{tikzpicture}[remember picture,overlay]
+        \fill[zoho-bg!4] (current page.north west) rectangle ([yshift=-3.1cm]current page.north east);
+        \fill[zoho-bg!2] (current page.south west) rectangle ([yshift=2.1cm]current page.south east);
+
+        \draw[zoho-blue, line width=1.2pt] ([yshift=-3.15cm]current page.north west) -- ([yshift=-3.15cm]current page.north east);
+        \draw[zoho-blue, line width=1.2pt] ([yshift=2.15cm]current page.south west) -- ([yshift=2.15cm]current page.south east);
+
+        \node[anchor=north west, inner sep=0.75cm] at (current page.north west)
+            {\includegraphics[height=1.65cm]{docs/images/zoho_logo.png}};
+        \node[anchor=north east, inner sep=0.75cm] at (current page.north east)
+            {\includegraphics[height=1.65cm]{docs/images/ssgmce_logo-removebg-preview.png}};
+    \end{tikzpicture}
+
+    \centering
+    \vspace*{2.8cm}
+
+    {\Huge\bfseries ZOHO SETU PROJECT \par}
+
+    \vspace{1.25cm}
+    {\small\color{zoho-blue}\textsc{Setu Project}} \par
+    \vspace{0.35cm}
+    \hrule height 1.1pt
+    \vspace{0.75cm}
+    {\Huge\bfseries Zoho OS\par}
+    \vspace{0.25cm}
+    {\large\itshape Software Domain\par}
+    \vspace{0.5cm}
+    \hrule height 1.1pt
+
+    \vspace{0.95cm}
+    \begin{mdframed}[
+        linecolor=zoho-blue,
+        linewidth=1pt,
+        backgroundcolor=white,
+        roundcorner=10pt,
+        innerleftmargin=16pt,
+        innerrightmargin=16pt,
+        innertopmargin=13pt,
+        innerbottommargin=13pt
+    ]
+        \centering
+        \textbf{Description}\par
+        \vspace{0.3cm}
+        Create a minimal 64-bit kernel with core components like USB drivers, memory management, and a graphical shell.\par
+        \vspace{0.5cm}
+        \textbf{Project Type:} Linux \hspace{1.35cm} \textbf{Category:} Software Based
+    \end{mdframed}
+
+    \vspace{0.8cm}
+    {\large\bfseries Atharva Bodade} \par
+     \vspace{0.2cm}
+    {\small Class: Third Year \par}
+    \vspace{0.2cm}
+    {\small Branch: Information Technology \par}
+    \vspace{0.12cm}
+    {\small Shri Sant Gajanan Maharaj College of Engineering, Shegaon \par}
+    \vspace{0.25cm}
+    {\small GitHub: \href{https://github.com/UnsettledAverage73/zoho-os}{https://github.com/UnsettledAverage73/zoho-os}} \par
+    \vspace{0.2cm}
+    {\small Reference: \href{https://kernel.org/}{https://kernel.org/}} \par
+
+    \vfill
+    {\large May 2026}
+\end{titlepage}
 
 \tableofcontents
 \newpage
 
-\chapter{Project Introduction: The Core Philosophy}
-\section{The Vision: From Silicon to Software}
-When you turn on your computer, a miracle happens. In less than 10 seconds, a piece of silicon and metal turns into a workspace. This project, \textbf{Zoho OS}, is the journey of building that miracle from the ground up. We are not using pre-made kernels, third-party libraries, or existing operating systems as a base; we are communicating directly with the hardware at the most fundamental level.
+% --- 2. VISION \& PROBLEM STATEMENT ---
+\chapter{Vision \& Problem Statement}
+The goal of this project is to develop a minimal, educational Linux-type kernel from scratch. It serves as a baseline for understanding low-level systems programming, memory management, and driver development.
 
-The source code for this project is available at: \\
-\url{https://github.com/UnsettledAverage73/zoho-os}
+\section{The Limitations of Today}
+Modern kernels like Linux are incredibly complex, making it difficult for students and researchers to grasp the core fundamentals of how an OS interacts with hardware. This project aims to strip away the complexity to provide a clear, functional baseline.
 
-The philosophy behind Zoho OS is \textit{"Total Understanding."} By writing every line of code—from the bootloader handshake to the graphical user interface—we eliminate the "black boxes" of modern computing and reclaim control over the machine.
+\ralph{I'm a system call! My glue tastes like memory management.}
 
-\section{The Core Objectives}
-The objective is to create a functional, high-performance, 64-bit monolithic operating system. The project focuses on several key technical pillars:
+\section{Project Philosophy}
+Zoho OS is built to be a minimal yet extensible system. This requires:
 \begin{itemize}
-    \item \textbf{Bare-Metal Execution:} Running directly on the hardware without any underlying abstraction layer.
-    \item \textbf{Modern Graphics Architecture:} Implementing a high-resolution linear framebuffer to support millions of colors and smooth animations.
-    \item \textbf{Symmetric Multi-Processing (SMP):} Utilizing all available CPU cores to enable true parallel execution.
-    \item \textbf{Advanced Memory Management:} Implementing 4-level paging to provide every process with a secure, 64-bit virtual address space.
-    \item \textbf{Custom System Logic:} Building our own interrupt handlers, task schedulers, and I/O drivers.
+    \item \textbf{Educational Clarity:} Well-documented code that maps directly to architectural concepts.
+    \item \textbf{Hardware Abstraction:} A clean interface between the kernel and the underlying x86\_64 hardware.
+    \item \textbf{Extensibility:} A modular design that allows for easy addition of new drivers and system calls.
 \end{itemize}
 
-\chapter{Architecture \& Design}
-\section{The Kitchen Analogy}
-To understand the kernel, we use the analogy of a restaurant:
-\begin{itemize}
-    \item \textbf{The Hardware (Kitchen):} The stove and ingredients. It has power but no direction.
-    \item \textbf{The Apps (Customers):} They want results but don't know how to use the hardware.
-    \item \textbf{The Kernel (The Chef):} This is Zoho OS. It manages the hardware resources to serve the applications safely and efficiently.
-\end{itemize}
+\newpage
 
-\section{The Folder Structure}
-The project is organized to separate the low-level "starting" code from the high-level "operating" code.
-\begin{itemize}
-    \item \textbf{src/boot/:} The "First Responders." Contains .asm files that wake up the CPU and transition to 64-bit mode.
-    \item \textbf{src/kernel/:} The "Engine Room." Contains .c and .asm files for core logic: memory management, task switching, and hardware drivers.
-    \item \textbf{include/kernel/:} The "Blueprint." Contains .h files defining structures and function signatures.
-    \item \textbf{isodir/:} The "Packaging." Temporary folder used to create the final .iso file.
-    \item \textbf{Makefile:} The "Recipe" that tells the computer how to compile everything.
-    \item \textbf{linker.ld:} The "Map" that tells the compiler where each piece of code lives in RAM.
-\end{itemize}
+% --- 3. ARCHITECTURE OVERVIEW ---
+\chapter{Architecture Overview}
+Zoho OS implements a **Modular Monolithic Architecture**. While all core services run within the same address space in Ring 0 for performance, the system is logically divided into strictly defined layers and modules to ensure maintainability and structural clarity.
 
-\section{The Tech Stack}
-\begin{itemize}
-    \item \textbf{x86\_64 Assembly (NASM):} For code C cannot do (like talking directly to CPU registers).
-    \item \textbf{C (GCC):} For 99\% of kernel logic. Used in "Freestanding" mode (no standard library).
-    \item \textbf{Build System:} GNU Make. Automates the compilation process.
-    \item \textbf{Boot Protocol:} Multiboot2. Standardized way for GRUB to hand over control.
-    \item \textbf{Emulation:} QEMU. A virtual computer used to test the OS.
-\end{itemize}
-
-\chapter{Phase 1: Bootstrapping \& 64-bit Transition}
-\section{The Multiboot2 Header (src/boot/header.asm)}
-When a computer turns on, it runs firmware (BIOS/UEFI) which looks for a Bootloader (like GRUB). GRUB looks for a specific signature called a Multiboot2 Header.
-
-\begin{lstlisting}[language={[x86masm]Assembler}, caption=src/boot/header.asm]
-section .multiboot_header
-header_start:
-    ; Magic number (multiboot 2)
-    dd 0xe85250d6
-    ; Architecture 0 (protected mode i386)
-    dd 0
-    ; Header length
-    dd header_end - header_start
-    ; Checksum
-    dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
-
-    ; Framebuffer tag request
-    align 8
-    dw 5    ; type
-    dw 0    ; flags
-    dd 20   ; size
-    dd 1024 ; width
-    dd 768  ; height
-    dd 32   ; depth
-
-    ; End tag
-    align 8
-    dw 0
-    dw 0
-    dd 8
-header_end:
-\end{lstlisting}
-
-\subsection{Line-by-Line Breakdown}
-\begin{itemize}
-    \item \textbf{section .multiboot\_header:} Tells the linker to put this at the very beginning of the binary.
-    \item \textbf{dd 0xe85250d6:} The Magic Number for Multiboot2.
-    \item \textbf{dd 0:} Architecture flag (32-bit protected mode).
-    \item \textbf{dd 0x100000000 - (...):} Checksum to verify the header is not corrupted.
-    \item \textbf{Framebuffer Tag:} Requests GRUB to set up a 1024x768 graphics mode.
-\end{itemize}
-
-\section{The 32-bit Entry \& Environment Checks (src/boot/main.asm)}
-GRUB jumps to the label \textit{start}. We are now in 32-bit Protected Mode.
-
-\begin{lstlisting}[language={[x86masm]Assembler}, caption=src/boot/main.asm]
-global start
-extern long_mode_start
-section .text
-bits 32
-start:
-    cli                 ; 1. Disable interrupts
-    mov esp, stack_top  ; 2. Set up a stack
-    
-    ; Preserve multiboot info early!
-    mov edi, eax        ; Magic number
-    mov esi, ebx        ; Pointer to multiboot info structure
-
-    call check_cpuid
-    call check_long_mode
-    call setup_page_tables
-    call enable_paging
-    lgdt [gdt64.pointer]
-    jmp gdt64.code:long_mode_start
-\end{lstlisting}
-
-\subsection{Breakdown}
-\begin{itemize}
-    \item \textbf{cli:} Disables interrupts as we don't have an IDT yet.
-    \item \textbf{mov esp, stack\_top:} Sets up a 16KB stack for C functions.
-    \item \textbf{Preserving eax and ebx:} Saves Multiboot info passed by GRUB into registers for later use in C.
-    \item \textbf{check\_cpuid / check\_long\_mode:} Verifies the CPU supports 64-bit mode.
-    \item \textbf{setup\_page\_tables:} Creates identity-mapped page tables.
-    \item \textbf{enable\_paging:} Flips bits in CR0, CR4, and EFER to enable Long Mode.
-    \item \textbf{jmp gdt64.code:long\_mode\_start:} A "Far Jump" to switch the CPU to 64-bit mode.
-\end{itemize}
-
-\section{Transition to 64-bit (src/boot/long\_mode\_init.asm)}
-This is the first file where we use 64-bit instructions.
-
-\begin{lstlisting}[language={[x86masm]Assembler}, caption=src/boot/long\_mode\_init.asm]
-global long_mode_start
-extern kmain
-section .text
-bits 64
-long_mode_start:
-    ; 1. Nullify Data Segment Registers
-    mov ax, 0
-    mov ss, ax
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-    ; 2. Print 'OK' to VGA
-    mov rax, 0x0f4b0f4f
-    mov [0xb8000], rax
-
-    ; 3. The Big Leap
-    call kmain
-    hlt
-\end{lstlisting}
-
-\chapter{Phase 2: Kernel Initialization}
-Welcome to the brain of the operating system. We have successfully crossed from Assembly into the structured world of C.
-
-\section{kmain() - The Orchestrator}
-In \textit{src/kernel/main.c}, \textit{kmain()} wakes up every part of the computer in the correct order.
-
-\begin{lstlisting}[language=C, caption=src/kernel/main.c]
-void kmain(unsigned long magic, unsigned long addr) {
-    struct multiboot_info* mb_info = (struct multiboot_info*)addr;
-    
-    cpu_early_init();
-    serial_init();
-    vga_clear();
-    klog_set_level(LOG_DEBUG);
-    klog(LOG_INFO, "KERNEL", "Zoho OS Booting...");
-
-    pmm_init(mb_info);
-    vmm_init();
-    kmalloc_init();
-
-    gdt_init();
-    idt_init_global();
-    idt_init_per_cpu();
-
-    __asm__ volatile ("sti"); // Enable Interrupts
-    
-    while(1) {
-        serial_poll_input();
-        e1000_poll();
-        window_update();
-        window_draw_all();
-    }
-}
-\end{lstlisting}
-
-\chapter{Phase 3: Hardware Interrupts \& IDT}
-An Interrupt is like a phone call. It can be a hardware event (key press) or a software emergency (division by zero).
-
-\section{The Interrupt Descriptor Table (IDT)}
-The IDT acts as a "Phone Directory" with 256 entries. Each entry tells the CPU where to jump when an interrupt happens.
-
-\begin{lstlisting}[language=C, caption=include/kernel/idt.h]
-struct idt_entry {
-    uint16_t offset_low;    // Lower 16 bits of handler address
-    uint16_t selector;      // Code segment selector (GDT)
-    uint8_t ist;            // Interrupt Stack Table
-    uint8_t type_attr;      // Flags (present, ring level)
-    uint16_t offset_middle; // Middle 16 bits
-    uint32_t offset_high;   // Upper 32 bits
-    uint32_t reserved;
-} __attribute__((packed));
-\end{lstlisting}
-
-\chapter{Phase 4: Memory Management}
-Memory management is divided into three layers:
-\begin{enumerate}
-    \item \textbf{Physical Memory Management (PMM):} Managing physical RAM frames (4KB chunks).
-    \item \textbf{Virtual Memory Management (VMM):} Creating virtual addresses and 4-level page tables (PML4, PDPT, PD, PT).
-    \item \textbf{Kernel Heap (kmalloc):} Providing dynamic allocation for small chunks of memory.
-\end{enumerate}
-
-\chapter{Phase 5: Multitasking \& Multiprocessing}
-\section{Symmetric Multi-Processing (SMP)}
-We use ACPI MADT tables to find all CPU cores and wake them up using a "Trampoline" code (started in 16-bit real mode) and IPI (Inter-Processor Interrupts).
-
-\section{Task Management}
-Every program is represented by a \textit{task\_t} struct (Process Control Block). Context switching involves saving the current CPU state and loading the state of the next task by swapping the \textit{RSP} (Stack Pointer) register.
-
-\chapter{The Build System and Packaging}
-The Makefile automates the entire process:
-\begin{enumerate}
-    \item \textbf{Compiling:} Converts .c and .asm files into .o object files.
-    \item \textbf{Linking:} Glues object files into \textit{kernel.bin} using \textit{linker.ld}.
-    \item \textbf{ISO Creation:} Packages the kernel and GRUB config into a bootable .iso using \textit{grub-mkrescue}.
-\end{enumerate}
-
-\chapter{Summary of the Total Picture}
+\section{System Architecture Diagram}
 \begin{center}
-\begin{tabular}{|m{3cm}|m{2.5cm}|m{8cm}|}
-\hline
-\textbf{Concept} & \textbf{File} & \textbf{Purpose} \\
-\hline
-System Calls & syscall.c & Lets user apps talk to the kernel safely. \\
-\hline
-PCI Scanning & pci.c & Finds hardware (NIC, Sound, Disk). \\
-\hline
-Linking & linker.ld & Arranges code in RAM correctly. \\
-\hline
-Shell & shell.c & The command-line interface for the user. \\
-\hline
-String Lib & string.c & Manual versions of memcpy, strlen, etc. \\
-\hline
-\end{tabular}
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.1cm and 1.2cm,
+    layerbox/.style={draw, dashed, rounded corners=12pt, fill=gray!5, inner sep=0.6cm},
+    usernode/.style={draw, rounded corners=8pt, fill=zoho-green!20, text width=3.2cm, text centered, minimum height=1.1cm, font=\small\bfseries},
+    kernnode/.style={draw, rounded corners=8pt, fill=zoho-blue!20, text width=3.2cm, text centered, minimum height=1.1cm, font=\small\bfseries},
+    hwnode/.style={draw, rounded corners=8pt, fill=zoho-red!20, text width=2.8cm, text centered, minimum height=1.1cm, font=\small\bfseries},
+    link/.style={-latex, ultra thick, draw=zoho-blue},
+    hwlink/.style={-latex, ultra thick, draw=zoho-red!70},
+    note/.style={font=\large\bfseries}
+]
+    % --- Nodes Definitions ---
+    % User Space (Ring 3)
+    \node (gui) [usernode] {Waybar / GUI};
+    \node (shell) [usernode, left=of gui] {User Shell / Apps};
+    \node (stats) [usernode, right=of gui] {System Dashboard};
+    \node (user_label) [note, above=0.3cm of gui] {User Space (Ring 3)};
+
+    % System Call Interface
+    \node (syscall) [draw, ellipse, fill=white, line width=1pt, below=1.2cm of gui, minimum width=7cm, minimum height=0.8cm] {\textbf{System Call Interface (INT 0x80)}};
+
+    % Kernel Core (Ring 0)
+    \node (vfs) [kernnode, below=1.0cm of syscall] {VFS / Filesystems\\(TAR, EXT2)};
+    \node (sched) [kernnode, left=of vfs] {SMP Scheduler\\Multitasking};
+    \node (net) [kernnode, right=of vfs] {Network Stack\\(TCP/IP, DHCP)};
+    
+    \node (vmm) [kernnode, below=of vfs] {Virtual Memory\\(4-Level Paging)};
+    \node (pmm) [kernnode, left=of vmm] {Physical Memory\\(Bitmap Allocator)};
+    \node (graphics) [kernnode, right=of vmm] {Window Manager\\Graphics Engine};
+    \node (kern_label) [note, above=0.3cm of vfs] {Kernel Core (Ring 0)};
+
+    % Hardware Abstraction Layer
+    \node (pci) [hwnode, below=1.5cm of vmm] {PCI / ACPI};
+    \node (storage) [hwnode, left=of pci] {Storage (ATA)};
+    \node (nic) [hwnode, left=of storage] {Network (E1000)};
+    \node (usb) [hwnode, right=of pci] {USB (XHCI)};
+    \node (hid) [hwnode, right=of usb] {HID (Kbd/Mouse)};
+    \node (hw_label) [note, below=0.3cm of pci] {Hardware Abstraction Layer (HAL)};
+
+    % --- Background Boxes ---
+    \begin{scope}[on background layer]
+        \node (user_box) [layerbox, fit=(shell) (stats) (user_label)] {};
+        \node (kern_box) [layerbox, fit=(sched) (net) (graphics) (pmm) (kern_label) (vfs)] {};
+        \node (hw_box) [layerbox, fit=(pci) (hid) (nic) (hw_label)] {};
+    \end{scope}
+
+    % --- Connections ---
+    \draw [link] (gui.south) -- (syscall.north);
+    \draw [link] (shell.south) -- ++(0,-0.6) -| (syscall.north);
+    \draw [link] (stats.south) -- ++(0,-0.6) -| (syscall.north);
+    
+    \draw [link] (syscall.south) -- (vfs.north);
+    \draw [link] (vfs.south) -- (vmm.north);
+    \draw [link] (sched.east) -- (vfs.west);
+    \draw [link] (vfs.east) -- (net.west);
+    
+    \draw [hwlink] (vmm.south) -- (pci.north);
+    \draw [hwlink] (pmm.south) -- ++(0,-0.8) -| (storage.north);
+    \draw [hwlink] (graphics.south) -- ++(0,-0.8) -| (hid.north);
+
+\end{tikzpicture}
+}
 \end{center}
 
-\chapter{Conclusion}
-From the first line of Assembly to a fully functional GUI, we have explored the entire lifecycle of an Operating System. Zoho OS demonstrates the fundamental "magic" that happens every time a computer is powered on.
+\section{Structural Integrity}
+The architecture is designed around three primary pillars:
+\begin{itemize}
+    \item \textbf{Isolation:} User-space applications are strictly isolated from the kernel and each other via 4-level paging and hardware-enforced protection rings.
+    \item \textbf{Abstraction:} The VFS and HAL provide a consistent interface for higher-level systems, allowing hardware-specific details to be swapped or updated without affecting the core logic.
+    \item \textbf{Observability:} Integrated logging (\texttt{klog}), statistics (\texttt{kstats}), and tracing (\texttt{ktrace}) are built into the kernel core to facilitate real-time debugging and performance monitoring.
+\end{itemize}
+
+\ralph{My architecture diagram looks like a city! I'm the mayor of the kernel.}
+
+\newpage
+
+% --- 4. BOOT PROCESS ---
+\chapter{Boot Process}
+The transition from a powered-off state to a running 64-bit environment involves a complex handoff between assembly and C.
+
+\section{Bootstrapping 64-bit Mode}
+\begin{center}
+\begin{tikzpicture}[node distance=1.2cm, auto]
+    \node (1) [draw, rounded corners] {Real Mode (BIOS/GRUB)};
+    \node (2) [draw, rounded corners, below of=1] {Protected Mode (32-bit)};
+    \node (3) [draw, rounded corners, below of=2] {Paging Setup (Identity Map)};
+    \node (4) [draw, rounded corners, below of=3] {Long Mode (64-bit)};
+    \node (5) [draw, rounded corners, below of=4] {Kernel Main (C)};
+    
+    \path [draw, -latex] (1) -- (2);
+    \path [draw, -latex] (2) -- (3);
+    \path [draw, -latex] (3) -- (4);
+    \path [draw, -latex] (4) -- (5);
+\end{tikzpicture}
+\end{center}
+
+\section{Key Milestones}
+\begin{enumerate}
+    \item \textbf{Multiboot2 Header:} Allows GRUB to recognize the kernel.
+    \item \textbf{PAE Paging:} Necessary to address the 64-bit space.
+    \item \textbf{GDT Flush:} Loading the global descriptor table for code and data segments.
+\end{enumerate}
+
+\ralph{I'm in danger! (If the GDT isn't loaded correctly).}
+
+\newpage
+
+% --- 5. CORE KERNEL SYSTEMS ---
+\chapter{Core Kernel Systems}
+
+\section{Physical Memory Manager (PMM)}
+The PMM uses a stack-based frame allocator combined with a bitmap.
+\ralph{Paging is like a sandwich. The physical frames are the bread, and the virtual addresses are the jelly!}
+
+\section{Virtual Memory Manager (VMM)}
+Zoho OS implements a 4-level paging system.
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+    \draw (0,0) rectangle (2,1) node[midway] {PML4};
+    \draw (3,0) rectangle (5,1) node[midway] {PDPT};
+    \draw (6,0) rectangle (8,1) node[midway] {PD};
+    \draw (9,0) rectangle (11,1) node[midway] {PT};
+    \draw[->] (2,0.5) -- (3,0.5);
+    \draw[->] (5,0.5) -- (6,0.5);
+    \draw[->] (8,0.5) -- (9,0.5);
+\end{tikzpicture}
+\end{center}
+\section{Interrupt Handling \& IDT}
+Zoho OS manages hardware asynchronous events through a centralized Interrupt Descriptor Table (IDT).
+\begin{center}
+\begin{tikzpicture}[node distance=1cm, auto]
+    \node (cpu) [draw] {CPU Hardware};
+    \node (idt) [draw, below=of cpu] {IDT Gate};
+    \node (stub) [draw, below=of idt] {Assembly Stub};
+    \node (isr) [draw, below=of stub] {C Handler};
+    \draw[->] (cpu) -- (idt);
+    \draw[->] (idt) -- (stub);
+    \draw[->] (stub) -- (isr);
+\end{tikzpicture}
+\end{center}
+\ralph{The interrupt button is like a doorbell. Ding-dong! Someone is at the CPU's house!}
+
+\section{Virtual File System (VFS)}
+The VFS layer abstracts underlying storage formats (TAR, EXT2) into a unified tree structure. 
+\begin{itemize}
+    \item \textbf{Disk-backed TAR:} Used for the initial ramdisk and system applications.
+    \item \textbf{Device Nodes:} Support for \texttt{/dev/tty} and \texttt{/dev/serial}.
+\end{itemize}
+\ralph{Files are like toys in a box. I have to open the box to play with them!}
+
+\section{Observability (KStats \& KTrace)}
+Zoho OS includes built-in observability tools that track kernel performance from the earliest boot stages.
+\begin{itemize}
+    \item \textbf{KStats:} Monitors physical memory usage, uptime, and active task counts.
+    \item \textbf{KTrace:} Provides an event buffer for high-speed tracing of kernel execution paths, essential for debugging race conditions in SMP mode.
+\end{itemize}
+\ralph{I'm a spy! I'm watching every single byte that moves in this kernel.}
+
+\section{Terminal Abstraction (TTY)}
+The TTY layer provides a unified interface for text-based communication, multiplexing output between the local VGA framebuffer and the remote Serial (COM1) port.
+\ralph{I'm talking to two people at once! One is on the screen, and the other is in the wires.}
+
+\section{USB Support (XHCI)}
+Zoho OS features an eXtensible Host Controller Interface (XHCI) driver foundation, enabling high-speed communication with USB 3.0 devices such as human interface devices (HID) and mass storage.
+\ralph{USB stands for Universal Super Best-friend!}
+
+\chapter{Unique Features}
+\section{Interactive Shell}
+Zoho OS features a userland shell that supports basic file operations and system queries.
+\ralph{I'm a shell! I'm the protective layer of the kernel egg.}
+
+\section{Video Demonstration}
+A full demonstration of the Zoho OS boot process, kernel initialization, and interactive shell is available in the project repository.
+\begin{center}
+    \includemedia[
+        width=0.8\linewidth,
+        height=0.45\linewidth,
+        activate=onclick,
+        addresource=docs/video/zoho.mp4,
+        flashvars={
+            source=docs/video/zoho.mp4
+            &autoPlay=true
+        }
+    ]{
+        \fbox{
+            \parbox[c][6cm][c]{10cm}{
+                \centering \Huge CLICK TO PLAY VIDEO
+            }
+        }
+    }{VPlayer.swf}
+\end{center}
+\ralph{I'm a movie star! I hope I win an Oscar for "Best Kernel in a Leading Role".}
+
+
+\section{Real-time System Monitor}
+The Dashboard task provides live CPU and Memory statistics. It runs as a separate kernel task, demonstrating the scheduler's ability to handle background observability.
+\ralph{I can see my house from here! (No, wait, those are just registers).}
+
+\section{GUI Performance Optimization}
+The window manager uses a "Dirty Rectangle" algorithm to minimize redraw overhead, combined with a dedicated kernel task to ensure smooth rendering even under heavy kernel load.
+
+\newpage
+
+% --- 7. TECHNICAL CHALLENGES ---
+\chapter{Technical Challenges}
+
+\section{Standardizing Framebuffer Pitch}
+\textbf{Problem:} Initial graphics implementation resulted in a black screen or skewed output on certain virtualized hardware.
+\textbf{Discovery:} I found that hardware often uses a `pitch` (bytes per scanline) that is wider than the visible width.
+\textbf{Resolution:} Refactored all graphics primitives (\texttt{clear}, \texttt{blit}, \texttt{put\_pixel}) to use \texttt{fb\_pitch} for coordinate calculations instead of simple \texttt{width * 4}.
+\ralph{My pixels were standing in the wrong line. Now they are holding hands correctly!}
+
+\section{The Huge Page Corruption Bug}
+An \texttt{INT 6} fault occurred because the VMM treated 2MB Huge Pages as tables. 
+\textbf{Resolution:} Refactored the identity map to use 4KB pages and updated VMM to handle flag propagation correctly. This ensures that 4KB mappings can coexist with the initial identity map without corrupting executable code.
+\ralph{I'm a bug! I'm hiding in your page tables.}
+
+\section{Memory Overlap (OOM)}
+The heap and PMM were conflicting on the same physical range.
+\textbf{Resolution:} Explicitly reserved the 128MB heap range in the PMM bitmap.
+\ralph{All the CPUs are talking at once. My head hurts!}
+
+\newpage
+
+% --- 8. FUTURE ROADMAP ---
+\chapter{Future Roadmap}
+\begin{itemize}
+    \item GPU Acceleration via VirtIO.
+    \item Custom Ext2/Ext4 Filesystem.
+    \item Distributed Runtime for AI Inference.
+\end{itemize}
+\ralph{When I grow up, I want to be a server OS!}
+
+\newpage
+
+% --- 9. SCREENSHOTS / DEBUG LOGS ---
+\chapter{System State}
+\section{Terminal Output}
+\begin{lstlisting}[basicstyle=\tiny, backgroundcolor=\color{gray!10}]
+[INFO ] TTY: Initializing TTY subsystem...
+[INFO ] TTY: TTY subsystem initialized.
+[INFO ] KERNEL: Zoho OS Booting...
+PMM Initialized. Total free frames: Done.
+[INFO ] KMALLOC: Kernel heap initialized at 16MB (Size: 16MB)
+[INFO ] KSTATS: Initializing kernel statistics...
+[INFO ] KSTATS: Kernel statistics initialized.
+[INFO ] KTRACE: Initializing kernel tracing...
+[INFO ] KTRACE: Kernel tracing initialized.
+[INFO ] ACPI: Initializing ACPI...
+[INFO ] PCI: Enumerating PCI devices...
+[INFO ] XHCI: Initializing XHCI (USB 3.0) controller...
+[INFO ] XHCI: XHCI subsystem initialized (stub).
+[INFO ] NET: Network stack initialized with IP 10.0.2.15
+
+Zoho OS Interactive Shell
+zoho> ls
+bin/
+bin/shell
+test.txt
+\end{lstlisting}
+
+\ralph{The logs are like stories, but with more numbers!}
+
+\newpage
+
+% --- 10. FINAL PAGE ---
+\chapter*{Contact \& Links}
+\centering
+\vspace{2cm}
+\textbf{Zoho OS Lead Developer}\\
+\vspace{1cm}
+\href{mailto:atharva@example.com}{atharva@example.com}\\
+\vspace{0.5cm}
+\href{https://github.com/UnsettledAverage73/zoho-os}{Project GitHub}\\
+\vspace{0.2cm}
+\href{https://kernel.org/}{Project Reference}\\
+
+\vspace{3cm}
+\ralph{I'm a documentation! I helped you get a job.}
 
 \end{document}
