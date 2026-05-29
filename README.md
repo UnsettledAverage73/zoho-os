@@ -3,7 +3,7 @@
 ## Baseline kernel OS 
 *Create a minimal Linux kernel with core components like drivers, memory management, and basic shell.*
 
-![osimage](docs/images/screenshot-2025-11-30_01-30-35.png)
+![osimage](docs/images/screenshot-2026-05-30_04-31-24.png)
 
 ---
 
