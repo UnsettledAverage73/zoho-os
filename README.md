@@ -1,42 +1,52 @@
-# Baseline kernel OS 🌌
+# Zoho Setu Project 2026 - Project Submission
 
-<video src="docs/video/zoho.gif" width="800" controls autoplay loop muted></video>
+## Baseline kernel OS 🌌
+
+<video src="zoho.mp4" width="800" controls autoplay loop muted></video>
 *A minimal, high-performance 64-bit microkernel demonstration.*
 
 ---
 
+### 📝 Submission Details
+
+| Field | Details |
+| :--- | :--- |
+| **Student Name** | Atharva Bodade |
+| **Branch** | Information Technology |
+| **Class** | Third Year |
+| **College Name** | Shri Sant Gajanan Maharaj College of Engineering, Shegaon |
+| **Project Type** | Linux |
+| **Category** | Software Based |
+
+---
+
 ## 🚀 Overview
-**Baseline kernel OS** is an educational x86_64 microkernel designed with a focus on modularity and observability. It implements modern kernel paradigms including symmetric multiprocessing (SMP), advanced memory isolation, and a custom high-resolution graphics engine.
+**Baseline kernel OS** is an educational x86_64 microkernel designed with a focus on modularity and observability. The goal of this project is to create a minimal Linux-like kernel with core components including drivers, memory management, and a basic functional shell.
 
-## ✨ Core Features
+## 🏗️ System Architecture
 
-### 🛡️ Microkernel Architecture
-- **64-bit Long Mode**: Native x86_64 execution.
-- **SMP Scheduler**: Load-balanced multitasking across multiple CPU cores.
-- **4-Level Paging**: Hardware-enforced isolation between kernel and userland.
-- **PMM/VMM**: Hybrid bitmap and stack-based memory management.
+Baseline kernel OS implements a **Modular Monolithic Architecture**. While core services run in Ring 0 for performance, the system is logically divided into distinct layers:
 
-### 🔌 Hardware Abstraction Layer
-- **XHCI Support**: Foundation for USB 3.0 device integration.
-- **Networking**: Integrated TCP/IP stack with DHCP and Intel E1000 support.
-- **VFS**: Virtual File System supporting TAR and EXT2.
-- **TTY**: Unified text output abstraction for VGA and Serial COM1.
+| Layer | Components |
+| :--- | :--- |
+| **User Space (Ring 3)** | Waybar / GUI, User Shell, System Dashboard |
+| **System Call Interface** | INT 0x80 / Syscall Entry |
+| **Kernel Core (Ring 0)** | SMP Scheduler, VFS (TAR/EXT2), TCP/IP Stack, VMM (4-Level Paging), PMM (Bitmap) |
+| **Hardware Abstraction (HAL)** | PCI/ACPI, ATA Storage, E1000 Network, XHCI USB, HID (Kbd/Mouse) |
 
-### 📊 Integrated Observability
-- **KTrace**: Non-blocking high-speed execution tracing.
-- **KStats**: Real-time system telemetry (Uptime, Memory, CPU load).
-- **KLog**: Structured multi-level kernel logging system.
-
-### 🖥️ User Experience
-- **GUI Engine**: Custom window manager with "Dirty Rectangle" optimization.
-- **Interactive Shell**: Userland terminal with POSIX-like command support.
+### 🛡️ Core Features
+- **64-bit Long Mode**: Full utilization of modern x86_64 architectural features.
+- **SMP Scheduler**: Multicore multitasking with task stealing and load balancing.
+- **4-Level Paging**: Secure hardware-enforced isolation between kernel and userland.
+- **Observability Stack**: Integrated high-speed tracing (**KTrace**) and real-time telemetry (**KStats**).
+- **GUI Engine**: Custom window manager with "Dirty Rectangle" redraw optimization.
 
 ---
 
 ## 🛠️ Build & Run
 
 ### 📦 Prerequisites
-Install `gcc`, `nasm`, `ld`, `make`, `qemu`, `grub-mkrescue`, and `xorriso`.
+You will need `gcc`, `nasm`, `ld`, `make`, `qemu-system-x86_64`, `grub-mkrescue`, and `xorriso`.
 
 ### 🔨 Compilation
 ```bash
@@ -50,16 +60,24 @@ make run
 
 ---
 
-## 📂 Architecture
-- `src/boot/`: Bootstrapping and CPU initialization.
-- `src/kernel/`: Core executive and hardware drivers.
+## 📂 Project Structure
+- `src/boot/`: Assembly entry and 64-bit bootstrapping.
+- `src/kernel/`: Core executive, memory management, and drivers.
 - `src/apps/`: User-space applications and system shell.
-- `include/`: Unified kernel API and headers.
+- `include/`: Unified kernel API and subsystem headers.
 
-## 📜 Technical Report
-For a deep dive into the implementation details, refer to [documentation.pdf](documentation.pdf).
+## 📜 Documentation
+A comprehensive technical deep-dive is available in the [Technical Report (PDF)](documentation.pdf).
 
 ---
 
-**Atharva Bodade** | Shri Sant Gajanan Maharaj College of Engineering, Shegaon  
-[GitHub Repository](https://github.com/UnsettledAverage73/zoho-os)
+## ⚖️ License
+This project is licensed under the **MIT License**.
+
+Copyright (c) 2026 Atharva Bodade
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
