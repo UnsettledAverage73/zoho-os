@@ -3,7 +3,7 @@
 ## Baseline kernel OS 
 *Create a minimal Linux kernel with core components like drivers, memory management, and basic shell.*
 
-<video src="zoho.mp4" width="800" controls autoplay loop muted></video>
+![osimage](docs/images/screenshot-2025-11-30_01-30-35.png)
 
 ---
 
