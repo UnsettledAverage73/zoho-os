@@ -226,21 +226,56 @@ The architecture is designed around three primary pillars:
 \chapter{Boot Process}
 The transition from a powered-off state to a running 64-bit environment involves a complex handoff between assembly and C.
 
-\section{Bootstrapping 64-bit Mode}
+\section{System Lifecycle \& Boot Sequence}
+The end-to-end initialization of Baseline kernel OS follows a strictly defined sequence of handoffs between hardware, firmware, and software layers.
+
 \begin{center}
-\begin{tikzpicture}[node distance=1.2cm, auto]
-    \node (1) [draw, rounded corners] {Real Mode (BIOS/GRUB)};
-    \node (2) [draw, rounded corners, below of=1] {Protected Mode (32-bit)};
-    \node (3) [draw, rounded corners, below of=2] {Paging Setup (Identity Map)};
-    \node (4) [draw, rounded corners, below of=3] {Long Mode (64-bit)};
-    \node (5) [draw, rounded corners, below of=4] {Kernel Main (C)};
-    
-    \path [draw, -latex] (1) -- (2);
-    \path [draw, -latex] (2) -- (3);
-    \path [draw, -latex] (3) -- (4);
-    \path [draw, -latex] (4) -- (5);
+\begin{tikzpicture}[
+    box/.style={draw, fill=zoho-blue!10, text width=6cm, text centered, minimum height=0.7cm, rounded corners},
+    arrow/.style={-latex, thick}
+]
+    \node (1) [box] {BIOS / UEFI Firmware};
+    \node (2) [box, below=0.4cm of 1] {GRUB Bootloader};
+    \node (3) [box, below=0.4cm of 2] {Multiboot2 Compliance Handoff};
+    \node (4) [box, below=0.4cm of 3] {32-bit Bootstrap (header.asm)};
+    \node (5) [box, below=0.4cm of 4] {Paging Setup (Identity Mapping)};
+    \node (6) [box, below=0.4cm of 5] {64-bit Long Mode Transition};
+    \node (7) [box, below=0.4cm of 6] {Kernel Initialization (kmain)};
+    \node (8) [box, below=0.4cm of 7] {Memory Managers (PMM / VMM)};
+    \node (9) [box, below=0.4cm of 8] {SMP Scheduler Startup};
+    \node (10) [box, below=0.4cm of 9] {Hardware Drivers (PCI, Net, Storage)};
+    \node (11) [box, fill=zoho-green!20, below=0.4cm of 10] {Interactive Shell (Ring 3)};
+
+    \draw [arrow] (1) -- (2);
+    \draw [arrow] (2) -- (3);
+    \draw [arrow] (3) -- (4);
+    \draw [arrow] (4) -- (5);
+    \draw [arrow] (5) -- (6);
+    \draw [arrow] (6) -- (7);
+    \draw [arrow] (7) -- (8);
+    \draw [arrow] (8) -- (9);
+    \draw [arrow] (9) -- (10);
+    \draw [arrow] (10) -- (11);
 \end{tikzpicture}
 \end{center}
+
+\section{Boot Sequence File Mapping}
+The following table maps the logical stages of the boot process to their respective implementation files in the source tree.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|p{6cm}|}
+\hline
+\textbf{Stage} & \textbf{Source File} & \textbf{Primary Responsibility} \\ \hline
+Multiboot2 Header & \texttt{src/boot/header.asm} & GRUB handshake and 32-bit entry. \\ \hline
+32-bit Bootstrap & \texttt{src/boot/main.asm} & Identity paging and GDT setup. \\ \hline
+Long Mode Setup & \texttt{src/boot/main.asm} & CPU far jump and 64-bit transition. \\ \hline
+Kernel Main & \texttt{src/kernel/main.c} & High-level C entry and initialization. \\ \hline
+Memory Setup & \texttt{pmm.c / vmm.c} & Physical and virtual memory context. \\ \hline
+SMP Handoff & \texttt{trampoline.asm} & AP (Application Processor) startup logic. \\ \hline
+\end{tabular}
+\caption{Boot Process File Mapping}
+\end{table}
 
 \section{Key Milestones}
 \begin{enumerate}
@@ -358,27 +393,58 @@ The scheduler implements a multicore round-robin algorithm with per-CPU runqueue
 \end{tikzpicture}
 \end{center}
 
-\section{Virtual File System (VFS)}
-The VFS layer abstracts underlying storage formats (TAR, EXT2) into a unified tree structure, allowing standardized access to diverse data sources.
+\section{File System Design \& Data Flow}
+The Baseline kernel OS filesystem is designed around a strictly hierarchical abstraction layer. This allows the kernel to treat hardware devices, local storage, and memory-backed archives through a unified "File" interface.
 
 \begin{center}
 \begin{tikzpicture}[
-    layer/.style={draw, fill=zoho-blue!10, text width=6cm, text centered, minimum height=0.8cm, rounded corners},
-    driver/.style={draw, fill=zoho-green!20, text width=2.5cm, text centered, minimum height=0.8cm}
+    level/.style={draw, fill=white, text width=8cm, text centered, minimum height=0.8cm, ultra thick},
+    api/.style={fill=zoho-blue!20},
+    core/.style={fill=zoho-green!10},
+    hw/.style={fill=zoho-red!10}
 ]
-    \node (vfs) [layer] {VFS Common Interface (open/read/write)};
-    \node (path) [layer, below=0.6cm of vfs] {Pathname Resolver / Mount Table};
+    \node (user) [level, api] {User Application (\texttt{read}, \texttt{write}, \texttt{open})};
+    \node (syscall) [level, below=0.5cm of user] {System Call Interface (INT 0x80)};
+    \node (vfs) [level, core, below=0.5cm of syscall] {Virtual File System (VFS) Layer};
+    \node (obj) [level, core, below=0.5cm of vfs] {File Objects / Inode Management};
     
-    \node (tar) [driver, below left=1cm and 0.5cm of path] {Initrd (TAR)};
-    \node (ext2) [driver, below right=1cm and 0.5cm of path] {Storage (EXT2)};
+    \node (tar) [level, below=1cm of obj, xshift=-2.5cm, text width=3.5cm] {Initrd (TAR)};
+    \node (ext2) [level, below=1cm of obj, xshift=2.5cm, text width=3.5cm] {Storage (EXT2)};
     
-    \draw [->, thick] (vfs) -- (path);
-    \draw [->, thick] (path) -- (tar);
-    \draw [->, thick] (path) -- (ext2);
-    
-    \node at (0,-4) {\textbf{VFS Abstraction Hierarchy}};
+    \node (ata) [level, hw, below=1cm of ext2, text width=3.5cm] {ATA Drive Driver};
+    \node (phys) [level, hw, below=0.5cm of ata, text width=3.5cm] {Physical Hard Disk};
+
+    \draw [->, thick] (user) -- (syscall);
+    \draw [->, thick] (syscall) -- (vfs);
+    \draw [->, thick] (vfs) -- (obj);
+    \draw [->, thick] (obj) -- (tar);
+    \draw [->, thick] (obj) -- (ext2);
+    \draw [->, thick] (ext2) -- (ata);
+    \draw [->, thick] (ata) -- (phys);
+
+    \node[anchor=west] at (4.5, -4.5) {\textbf{Logical Flow:}};
+    \node[anchor=west, font=\tiny] at (4.5, -5.0) {1. Path Resolution};
+    \node[anchor=west, font=\tiny] at (4.5, -5.5) {2. Driver Request};
+    \node[anchor=west, font=\tiny] at (4.5, -6.0) {3. Block I/O};
 \end{tikzpicture}
 \end{center}
+
+\section{Filesystem Implementation Mapping}
+The hierarchical design of the VFS is implemented across the following modules:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|p{6cm}|}
+\hline
+\textbf{Layer} & \textbf{Source File} & \textbf{Implementation Role} \\ \hline
+VFS Abstraction & \texttt{src/kernel/vfs.c} & Path parsing and driver dispatching. \\ \hline
+Initrd Driver & \texttt{src/kernel/tar.c} & Read-only access to disk-backed TAR archive. \\ \hline
+Storage Driver & \texttt{src/kernel/ext2.c} & Ext2 block and inode management. \\ \hline
+Block I/O & \texttt{src/kernel/ata.c} & Low-level ATA PIO mode disk driver. \\ \hline
+Device Nodes & \texttt{src/kernel/tty.c} & Character device interface for \texttt{/dev/tty}. \\ \hline
+\end{tabular}
+\caption{Filesystem Implementation Mapping}
+\end{table}
 
 \begin{itemize}
     \item \textbf{Disk-backed TAR:} Used for the initial ramdisk and system applications.
