@@ -12,6 +12,21 @@
 \usetikzlibrary{shapes.geometric, arrows, positioning, calc, fit, backgrounds}
 \usepackage{mdframed}
 \usepackage{amsmath}
+\usepackage{fancyhdr}
+
+% Configure professional headers
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Ensure plain style (used on chapter starts) matches or is acceptable
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyhead[R]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
 
 % Colors for the Mocha/Zoho theme
 \definecolor{zoho-bg}{HTML}{1E1E2E}
