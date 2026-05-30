@@ -19,9 +19,15 @@
 | **Submission Date** | May 2026 |
 
 ---
-
 ## 🚀 Executive Summary
 **Baseline kernel OS** is an educational x86_64 microkernel designed to strip away the complexity of modern operating systems while maintaining modern architectural paradigms. It provides a functional baseline for symmetric multiprocessing (SMP), advanced memory isolation, and a custom high-resolution graphics engine.
+
+## 🎓 Educational Series (Build from Scratch)
+A comprehensive video playlist explaining the development of Baseline kernel OS from line one. Every architectural decision, technical term, and code segment is explained in detail to serve as a deep-dive educational resource.
+
+[**Watch the "Build OS from Scratch" Playlist on YouTube**](https://youtube.com/playlist?list=PLb1KzvlWYXQyj9d0_CZLnfdKmXT8Cd8uO&si=qObA4ucaPsYkwjuy)
+
+---
 
 ## 🏗️ Technical Architecture Deep-Dive
 
