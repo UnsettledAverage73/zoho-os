@@ -261,42 +261,47 @@ The PMM uses a high-performance hybrid architecture, combining a stack-based fra
     mem/.style={draw, fill=gray!10, minimum width=0.8cm, minimum height=0.8cm, outer sep=0pt},
     free/.style={fill=zoho-blue!30},
     used/.style={fill=zoho-red!30},
-    stack/.style={draw, fill=zoho-blue!10, minimum width=2.5cm, minimum height=0.6cm, rounded corners=2pt},
-    bitmap/.style={draw, fill=zoho-green!10, minimum width=0.5cm, minimum height=0.5cm, font=\tiny\ttfamily},
+    stack/.style={draw, fill=zoho-blue!10, minimum width=2.8cm, minimum height=0.6cm, rounded corners=2pt, font=\small\ttfamily},
+    bitmap/.style={draw, fill=zoho-green!10, minimum width=0.6cm, minimum height=0.6cm, font=\small\ttfamily},
     arrow/.style={-latex, ultra thick, draw=zoho-blue!70}
 ]
-    % RAM Bar
-    \node[anchor=west] at (-0.5, 2.5) {\textbf{Physical RAM Map:}};
+    % Physical RAM Map
+    \node[anchor=west] at (-0.5, 3.2) {\textbf{Physical RAM Map:}};
     \foreach \x [count=\i] in {0,...,7} {
-        \ifnum\i=2 \node (m\x) [mem, used] at (\x*0.8, 1.5) {R};
-        \else \ifnum\i=5 \node (m\x) [mem, used] at (\x*0.8, 1.5) {R};
-        \else \node (m\x) [mem, free] at (\x*0.8, 1.5) {F};
+        \ifnum\i=2 \node (m\x) [mem, used] at (\x*0.8, 2.2) {R};
+        \else \ifnum\i=5 \node (m\x) [mem, used] at (\x*0.8, 2.2) {R};
+        \else \node (m\x) [mem, free] at (\x*0.8, 2.2) {F};
         \fi \fi
     }
     \node[right=0.2cm of m7] {...};
 
-    % Legend
-    \node[mem, free, scale=0.6, label=right:{\tiny Free}] at (7, 2.5) {};
-    \node[mem, used, scale=0.6, label=right:{\tiny Reserved}] at (8.5, 2.5) {};
+    % Legend (Moved higher)
+    \node[mem, free, scale=0.5, label=right:{\tiny Free}] at (7, 3.2) {};
+    \node[mem, used, scale=0.5, label=right:{\tiny Reserved}] at (8.5, 3.2) {};
 
-    % Free Frame Stack
-    \node (s3) [stack] at (1.5, -1.0) {Addr: 0x4000};
+    % Free Frame Stack (Adjusted Position)
+    \node (s3) [stack] at (1.5, -0.5) {Addr: 0x4000};
     \node (s2) [stack, above=-0.1cm of s3] {Addr: 0x2000};
     \node (s1) [stack, above=-0.1cm of s2] {Addr: 0x1000};
-    \node[above=0.2cm of s1] {\small Free Frame Stack ($O(1)$)};
+    \node[above=0.3cm of s1, font=\bfseries\small, text=zoho-blue] {Free Frame Stack ($O(1)$)};
     
-    % Bitmap Tracker
+    % Bitmap Tracker (Adjusted Position)
     \foreach \b [count=\j] in {0,1,0,0,1,0,0,0} {
-        \node (b\j) [bitmap] at (4.5 + \j*0.5, -1.0) {\b};
+        \node (b\j) [bitmap] at (4.5 + \j*0.6, -0.5) {\b};
     }
-    \node[below=0.2cm of b4] {\small Bitmap Tracker (1 = Reserved)};
+    \node[below=0.4cm of b4, font=\bfseries\small, text=zoho-green] {Bitmap Tracker (1 = Reserved)};
 
-    % Connections
-    \draw[arrow] (m0.south) -- ++(0,-0.4) -| (s1.north) node[pos=0.2, left] {Push/Pop};
-    \draw[arrow, draw=zoho-green] (m1.south) -- ++(0,-0.8) -| (b2.north) node[pos=0.2, right] {Bit Set};
-    \draw[<->, dashed, ultra thick, draw=gray!60] (s3.east) -- (b1.west) node[midway, above] {\tiny Validation Sync};
+    % Connections (Fixed Overlaps)
+    \draw[arrow] (m0.south) -- ++(0,-0.4) -| (s1.north) 
+        node[pos=0.3, left, font=\tiny\bfseries] {Push/Pop};
+        
+    \draw[arrow, draw=zoho-green] (m1.south) -- ++(0,-1.0) -| (b2.north) 
+        node[pos=0.2, right, font=\tiny\bfseries, text=zoho-green] {Bit Set};
+        
+    \draw[<->, dashed, ultra thick, draw=gray!60] (s3.east) -- (b1.west) 
+        node[midway, above, font=\tiny\bfseries, text=gray] {Validation Sync};
 
-    \node at (4,-2.5) {\textbf{PMM Hybrid Allocation Engine Architecture}};
+    \node at (4.5, -2.0) {\textbf{PMM Hybrid Allocation Engine Architecture}};
 \end{tikzpicture}
 \end{center}
 
