@@ -611,6 +611,45 @@ Baseline kernel OS is envisioned as a continuously evolving platform for systems
     \item \textbf{Full Graphical Desktop Environment (DE)}: Expand the current window manager into a full-featured DE with a taskbar, file manager, and system settings suite.
 \end{itemize}
 
+\chapter{Setup \& Installation Guide}
+Developing Baseline kernel OS requires a specific toolchain including a C compiler, assembler, and hardware emulator. This guide covers the installation process for major operating systems.
+
+\section{Linux Environments}
+Baseline kernel OS is natively developed on Linux. The following commands install the required dependencies (GCC, NASM, QEMU, GRUB, and Xorriso) for major distributions.
+
+\subsection{Arch Linux}
+\begin{lstlisting}[language=bash, basicstyle=\small\ttfamily, backgroundcolor=\color{gray!10}]
+sudo pacman -S base-devel nasm qemu-desktop grub libisoburn mtools
+\end{lstlisting}
+
+\subsection{Debian / Ubuntu}
+\begin{lstlisting}[language=bash, basicstyle=\small\ttfamily, backgroundcolor=\color{gray!10}]
+sudo apt update
+sudo apt install build-essential nasm qemu-system-x86 grub-pc-bin grub-common xorriso mtools
+\end{lstlisting}
+
+\subsection{RHEL / Fedora}
+\begin{lstlisting}[language=bash, basicstyle=\small\ttfamily, backgroundcolor=\color{gray!10}]
+sudo dnf groupinstall "Development Tools"
+sudo dnf install nasm qemu-system-x86 grub2-tools xorriso mtools
+\end{lstlisting}
+
+\section{Windows Environment}
+The recommended development environment for Windows users is **WSL2 (Windows Subsystem for Linux)**.
+
+\begin{enumerate}
+    \item \textbf{Install WSL2}: Open PowerShell as Administrator and run \texttt{wsl --install}.
+    \item \textbf{Install Dependencies}: Once WSL is set up (Ubuntu is recommended), follow the \textbf{Debian / Ubuntu} instructions provided in the Linux section.
+    \item \textbf{Graphical Output}: To view the OS GUI from WSL, ensure you are using Windows 11 with WSLg support, or install an X-Server like \textit{VcXsrv} or \textit{GWSL} on Windows 10.
+\end{enumerate}
+
+\section{Building and Running}
+Once the environment is configured, use the following commands from the project root:
+\begin{itemize}
+    \item \textbf{Build ISO}: \texttt{make iso} - Compiles the kernel and generates a bootable \texttt{.iso} image.
+    \item \textbf{Run in QEMU}: \texttt{make run} - Launches the OS in the QEMU emulator with multicore and XHCI support enabled.
+\end{itemize}
+
 \newpage
 
 % --- 9. SCREENSHOTS / DEBUG LOGS ---

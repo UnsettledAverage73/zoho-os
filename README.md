@@ -118,10 +118,34 @@ The VFS layer abstracts storage into a unified tree structure:
 
 ## 🚀 Getting Started
 
-### Prerequisites
-`gcc`, `nasm`, `make`, `qemu-system-x86_64`, `xorriso`, `grub-mkrescue`.
+### 📦 Prerequisites & Environment Setup
+The development of Baseline kernel OS requires a 64-bit environment with a C compiler, assembler, and hardware emulator.
 
-### Build & Run
+#### **Linux (Native)**
+Select the command for your specific distribution:
+
+- **Arch Linux**:
+  ```bash
+  sudo pacman -S base-devel nasm qemu-desktop grub libisoburn mtools
+  ```
+- **Debian / Ubuntu**:
+  ```bash
+  sudo apt update && sudo apt install build-essential nasm qemu-system-x86 grub-pc-bin grub-common xorriso mtools
+  ```
+- **RHEL / Fedora**:
+  ```bash
+  sudo dnf groupinstall "Development Tools" && sudo dnf install nasm qemu-system-x86 grub2-tools xorriso mtools
+  ```
+
+#### **Windows**
+The recommended approach for Windows is using **WSL2 (Windows Subsystem for Linux)**:
+1. Install WSL2 (Ubuntu is recommended): `wsl --install`.
+2. Follow the **Debian / Ubuntu** instructions above within the WSL terminal.
+3. To run the OS with a GUI, ensure you have an X-Server (like GWSL) installed or use the native WSLg support in Windows 11.
+
+---
+
+### 🔨 Build & Run
 ```bash
 make iso    # Generate bootable zoho_os.iso
 make run    # Execute in QEMU with XHCI and USB support
