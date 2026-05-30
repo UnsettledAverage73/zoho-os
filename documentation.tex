@@ -28,26 +28,6 @@
     pdfpagemode=FullScreen,
 }
 
-% Professional sidebar for "Ralph Observations"
-\newmdenv[
-  linecolor=zoho-blue,
-  linewidth=2pt,
-  leftmargin=10pt,
-  rightmargin=10pt,
-  innerleftmargin=10pt,
-  innerrightmargin=10pt,
-  innertopmargin=10pt,
-  innerbottommargin=10pt,
-  backgroundcolor=gray!10,
-  roundcorner=5pt
-]{ralphnote}
-
-\newcommand{\ralph}[1]{
-    \begin{ralphnote}
-    \textit{\textbf{Observation:} #1}
-    \end{ralphnote}
-}
-
 \title{Baseline kernel OS: Minimal 64-bit Microkernel}
 \author{Atharva Bodade}
 \date{May 2026}
@@ -131,8 +111,6 @@ The goal of this project is to develop a minimal, educational Linux-type kernel 
 
 \section{The Limitations of Today}
 Modern kernels like Linux are incredibly complex, making it difficult for students and researchers to grasp the core fundamentals of how an OS interacts with hardware. This project aims to strip away the complexity to provide a clear, functional baseline.
-
-\ralph{I'm a system call! My glue tastes like memory management.}
 
 \section{Project Philosophy}
 Baseline kernel OS is built to be a minimal yet extensible system. This requires:
@@ -222,8 +200,6 @@ The architecture is designed around three primary pillars:
     \item \textbf{Observability:} Integrated logging (\texttt{klog}), statistics (\texttt{kstats}), and tracing (\texttt{ktrace}) are built into the kernel core to facilitate real-time debugging and performance monitoring.
 \end{itemize}
 
-\ralph{My architecture diagram looks like a city! I'm the mayor of the kernel.}
-
 \newpage
 
 % --- 4. BOOT PROCESS ---
@@ -253,8 +229,6 @@ The transition from a powered-off state to a running 64-bit environment involves
     \item \textbf{GDT Flush:} Loading the global descriptor table for code and data segments.
 \end{enumerate}
 
-\ralph{I'm in danger! (If the GDT isn't loaded correctly).}
-
 \newpage
 
 % --- 5. CORE KERNEL SYSTEMS ---
@@ -262,7 +236,6 @@ The transition from a powered-off state to a running 64-bit environment involves
 
 \section{Physical Memory Manager (PMM)}
 The PMM uses a stack-based frame allocator combined with a bitmap.
-\ralph{Paging is like a sandwich. The physical frames are the bread, and the virtual addresses are the jelly!}
 
 \section{Virtual Memory Manager (VMM)}
 Baseline kernel OS implements a 4-level paging system.
@@ -290,7 +263,6 @@ Baseline kernel OS manages hardware asynchronous events through a centralized In
     \draw[->] (stub) -- (isr);
 \end{tikzpicture}
 \end{center}
-\ralph{The interrupt button is like a doorbell. Ding-dong! Someone is at the CPU's house!}
 
 \section{Virtual File System (VFS)}
 The VFS layer abstracts underlying storage formats (TAR, EXT2) into a unified tree structure. 
@@ -298,7 +270,6 @@ The VFS layer abstracts underlying storage formats (TAR, EXT2) into a unified tr
     \item \textbf{Disk-backed TAR:} Used for the initial ramdisk and system applications.
     \item \textbf{Device Nodes:} Support for \texttt{/dev/tty} and \texttt{/dev/serial}.
 \end{itemize}
-\ralph{Files are like toys in a box. I have to open the box to play with them!}
 
 \section{Observability (KStats \& KTrace)}
 Baseline kernel OS includes built-in observability tools that track kernel performance from the earliest boot stages.
@@ -306,31 +277,25 @@ Baseline kernel OS includes built-in observability tools that track kernel perfo
     \item \textbf{KStats:} Monitors physical memory usage, uptime, and active task counts.
     \item \textbf{KTrace:} Provides an event buffer for high-speed tracing of kernel execution paths, essential for debugging race conditions in SMP mode.
 \end{itemize}
-\ralph{I'm a spy! I'm watching every single byte that moves in this kernel.}
 
 \section{Terminal Abstraction (TTY)}
 The TTY layer provides a unified interface for text-based communication, multiplexing output between the local VGA framebuffer and the remote Serial (COM1) port.
-\ralph{I'm talking to two people at once! One is on the screen, and the other is in the wires.}
 
 \section{USB Support (XHCI)}
 Baseline kernel OS features an eXtensible Host Controller Interface (XHCI) driver foundation, enabling high-speed communication with USB 3.0 devices such as human interface devices (HID) and mass storage.
-\ralph{USB stands for Universal Super Best-friend!}
 
 \chapter{Unique Features}
 \section{Interactive Shell}
 Baseline kernel OS features a userland shell that supports basic file operations and system queries.
-\ralph{I'm a shell! I'm the protective layer of the kernel egg.}
 
 \section{Video Demonstration}
 A full demonstration of the Baseline kernel OS boot process, kernel initialization, and interactive shell is available on YouTube.
 \begin{center}
     \href{https://www.youtube.com/watch?v=gFLKEqt4GPs}{\Huge\textbf{[Watch the Baseline kernel OS Demo on YouTube]}}
 \end{center}
-\ralph{I'm a movie star! I hope I win an Oscar for "Best Kernel in a Leading Role".}
 
 \section{Real-time System Monitor}
 The Dashboard task provides live CPU and Memory statistics. It runs as a separate kernel task, demonstrating the scheduler's ability to handle background observability.
-\ralph{I can see my house from here! (No, wait, those are just registers).}
 
 \section{GUI Performance Optimization}
 The window manager uses a "Dirty Rectangle" algorithm to minimize redraw overhead, combined with a dedicated kernel task to ensure smooth rendering even under heavy kernel load.
@@ -344,17 +309,14 @@ The window manager uses a "Dirty Rectangle" algorithm to minimize redraw overhea
 \textbf{Problem:} Initial graphics implementation resulted in a black screen or skewed output on certain virtualized hardware.
 \textbf{Discovery:} I found that hardware often uses a `pitch` (bytes per scanline) that is wider than the visible width.
 \textbf{Resolution:} Refactored all graphics primitives (\texttt{clear}, \texttt{blit}, \texttt{put\_pixel}) to use \texttt{fb\_pitch} for coordinate calculations instead of simple \texttt{width * 4}.
-\ralph{My pixels were standing in the wrong line. Now they are holding hands correctly!}
 
 \section{The Huge Page Corruption Bug}
 An \texttt{INT 6} fault occurred because the VMM treated 2MB Huge Pages as tables. 
 \textbf{Resolution:} Refactored the identity map to use 4KB pages and updated VMM to handle flag propagation correctly. This ensures that 4KB mappings can coexist with the initial identity map without corrupting executable code.
-\ralph{I'm a bug! I'm hiding in your page tables.}
 
 \section{Memory Overlap (OOM)}
 The heap and PMM were conflicting on the same physical range.
 \textbf{Resolution:} Explicitly reserved the 128MB heap range in the PMM bitmap.
-\ralph{All the CPUs are talking at once. My head hurts!}
 
 \newpage
 
@@ -365,7 +327,6 @@ The heap and PMM were conflicting on the same physical range.
     \item Custom Ext2/Ext4 Filesystem.
     \item Distributed Runtime for AI Inference.
 \end{itemize}
-\ralph{When I grow up, I want to be a server OS!}
 
 \newpage
 
@@ -395,23 +356,22 @@ bin/shell
 test.txt
 \end{lstlisting}
 
-\ralph{The logs are like stories, but with more numbers!}
-
 \newpage
 
 % --- 10. FINAL PAGE ---
 \chapter*{Contact \& Links}
 \centering
 \vspace{2cm}
-\textbf{Baseline kernel OS Lead Developer}\\
+\textbf{Atharva Bodade}\\
 \vspace{1cm}
-\href{mailto:atharva@example.com}{atharva@example.com}\\
+\href{mailto:atharvabodade@gmail.com}{atharvabodade@gmail.com}\\
+\vspace{0.3cm}
+\href{mailto:ssgm_308217@ssgmce.ac.in}{ssgm\_308217@ssgmce.ac.in}\\
 \vspace{0.5cm}
-\href{https://github.com/UnsettledAverage73/zoho-os}{Project GitHub}\\
-\vspace{0.2cm}
+\href{https://github.com/UnsettledAverage73}{GitHub Profile}\\
+\vspace{0.3cm}
+\href{https://www.linkedin.com/in/unsettledaverage73/}{LinkedIn Profile}\\
+\vspace{0.3cm}
 \href{https://kernel.org/}{Project Reference}\\
-
-\vspace{3cm}
-\ralph{I'm a documentation! I helped you get a job.}
 
 \end{document}
