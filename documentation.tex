@@ -333,6 +333,28 @@ The heap and PMM were conflicting on the same physical range.
 % --- 9. SCREENSHOTS / DEBUG LOGS ---
 \chapter{System State}
 \section{Terminal Output}
+The following section provides real-time logs and visual confirmation of the Baseline kernel OS build and execution process.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{docs/images/terminal_build.png}
+    \caption{Build process and ISO generation via Makefile.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{docs/images/terminal_boot.png}
+    \caption{Early kernel initialization and subsystem startup logs.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{docs/images/terminal_shell.png}
+    \caption{Interactive shell session and final system stabilization.}
+\end{figure}
+
+\newpage
+\section{Text-based Boot Logs}
 \begin{lstlisting}[basicstyle=\tiny, backgroundcolor=\color{gray!10}]
 [INFO ] TTY: Initializing TTY subsystem...
 [INFO ] TTY: TTY subsystem initialized.
