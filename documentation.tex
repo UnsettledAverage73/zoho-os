@@ -293,11 +293,11 @@ The PMM uses a high-performance hybrid architecture, combining a stack-based fra
     \node[below=0.4cm of b4, font=\bfseries\small, text=zoho-green] {Bitmap Tracker (1 = Reserved)};
 
     % Connections (Fixed Overlaps)
-    \draw[arrow] (m0.south) -- ++(0,-0.4) -| (s1.north) 
-        node[pos=0.3, left, font=\tiny\bfseries] {Push/Pop};
+    \draw[arrow] (m0.south) -- ++(0,-0.4) -| (s1.north);
+    \node[left=0.1cm of m0, yshift=-0.2cm, font=\tiny\bfseries] {Push/Pop};
         
-    \draw[arrow, draw=zoho-green] (m1.south) -- ++(0,-1.0) -| (b2.north) 
-        node[pos=0.2, right, font=\tiny\bfseries, text=zoho-green] {Bit Set};
+    \draw[arrow, draw=zoho-green] (m1.south) -- ++(0,-1.0) -| (b2.north);
+    \node[right=0.1cm of m1, yshift=-0.5cm, font=\tiny\bfseries, text=zoho-green] {Bit Set};
         
     \draw[<->, dashed, ultra thick, draw=gray!60] (s3.east) -- (b1.west) 
         node[midway, above, font=\tiny\bfseries, text=gray] {Validation Sync};
@@ -442,6 +442,21 @@ Baseline kernel OS provides a comprehensive interactive shell for system managem
 \end{table}
 
 \section{Interaction Examples}
+Baseline kernel OS shell supports various commands for deep-system inspection and control.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{docs/images/screenshot-2026-05-30_15-52-57.png}
+    \caption{Shell Overview: Help system and core command execution.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{docs/images/screenshot-2026-05-30_15-51-50.png}
+    \caption{System Management: Task monitor and networking status.}
+\end{figure}
+
+\newpage
 \textbf{System Telemetry (\texttt{monitor}):}
 \begin{lstlisting}[basicstyle=\tiny, backgroundcolor=\color{gray!5}]
 zoho> monitor
