@@ -76,7 +76,17 @@ The VFS layer abstracts storage into a unified tree structure:
 
 ### 🖥️ User Experience (UX)
 - **GUI Engine**: A custom window manager (`window.c`) featuring "Dirty Rectangle" optimization to minimize redraw overhead.
-- **Interactive Shell**: A Ring-3 userland terminal supporting POSIX-like commands (`ls`, `cat`, `top`, `ps`).
+- **Interactive Shell**: A Ring-3 userland terminal with a rich command set:
+  | Command | Description |
+  | :--- | :--- |
+  | `help` | List all available commands |
+  | `monitor` | Real-time system telemetry (CPU, RAM, Tasks) |
+  | `top` | Active process list and state monitor |
+  | `net` | Network configuration and RX/TX stats |
+  | `ls`, `cat` | File system navigation and reading |
+  | `heap`, `free` | Memory allocator and PMM statistics |
+  | `stress_proc` | Preemptive multitasking stress test |
+  | `clear` | Terminal screen reset |
 
 ---
 

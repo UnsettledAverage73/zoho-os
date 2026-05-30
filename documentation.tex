@@ -416,6 +416,53 @@ The TTY layer provides a unified interface for text-based communication, multipl
 \section{USB Support (XHCI)}
 Baseline kernel OS features an eXtensible Host Controller Interface (XHCI) driver foundation, enabling high-speed communication with USB 3.0 devices such as human interface devices (HID) and mass storage.
 
+\chapter{Shell Commands \& Interaction}
+Baseline kernel OS provides a comprehensive interactive shell for system management, debugging, and application execution. The following table details the primary commands available.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|p{6cm}|l|}
+\hline
+\textbf{Command} & \textbf{Description} & \textbf{Context} \\ \hline
+\texttt{help} & Displays the list of all available commands. & General \\ \hline
+\texttt{monitor} & Real-time CPU usage, Memory (MB used/total), and Task count. & Observability \\ \hline
+\texttt{top} & Lists all active tasks with ID, CPU affinity, Ticks, and State. & Task Mgmt \\ \hline
+\texttt{net} & Displays MAC/IP addresses and Packet RX/TX counts. & Networking \\ \hline
+\texttt{ls} & Lists all files and directories in the current VFS path. & Storage \\ \hline
+\texttt{cat <file>} & Reads and prints the contents of a file to the terminal. & Storage \\ \hline
+\texttt{write <f> <t>} & Writes a string of text to a specified file. & Storage \\ \hline
+\texttt{exec <file>} & Loads and executes a binary file from the VFS. & Process \\ \hline
+\texttt{heap} & Detailed statistics of the Slab/Heap memory allocator. & Memory \\ \hline
+\texttt{free} & Displays the total count of free physical memory frames. & Memory \\ \hline
+\texttt{locks} & Shows acquisition and contention stats for kernel spinlocks. & Debugging \\ \hline
+\texttt{stress\_proc} & Initiates a "Process Storm" test to verify scheduler stability. & Stress Test \\ \hline
+\texttt{clear} & Clears the terminal screen and resets the cursor. & General \\ \hline
+\end{tabular}
+\caption{Primary Shell Commands}
+\end{table}
+
+\section{Interaction Examples}
+\textbf{System Telemetry (\texttt{monitor}):}
+\begin{lstlisting}[basicstyle=\tiny, backgroundcolor=\color{gray!5}]
+zoho> monitor
+--- System Monitor ---
+CPU Cores: 4
+ CPU 0: Usage 12%
+ CPU 1: Usage 5%
+Memory: 24MB / 512MB used
+Tasks: 8
+\end{lstlisting}
+
+\textbf{Task List (\texttt{top}):}
+\begin{lstlisting}[basicstyle=\tiny, backgroundcolor=\color{gray!5}]
+zoho> top
+ID  CPU  TICKS  STATE
+0   0    12500  RUNNING
+1   1    450    READY
+2   0    120    READY
+\end{lstlisting}
+
+\newpage
 \chapter{Unique Features}
 \section{Interactive Shell}
 Baseline kernel OS features a userland shell that supports basic file operations and system queries.
