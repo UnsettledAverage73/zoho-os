@@ -535,7 +535,33 @@ test.txt
 
 \newpage
 
-% --- 10. RESEARCH & REFERENCES ---
+% --- 10. CONCLUSION ---
+\chapter{Conclusion}
+The development of \textbf{Baseline kernel OS} has been a comprehensive journey through the fundamental layers of modern computing. By stripping away the overwhelming complexity of production-grade kernels while retaining modern architectural paradigms, this project has successfully established a clear, functional baseline for 64-bit system development.
+
+\begin{center}
+\begin{tikzpicture}
+    \node (box) [draw, fill=zoho-bg!5, rounded corners=15pt, line width=1.5pt, draw=zoho-blue, text width=0.85\textwidth, inner sep=20pt] {
+        \centering \Large \textbf{Core Project Achievements} \vspace{10pt}
+        \normalsize
+        \begin{itemize}
+            \item \textbf{Architectural Foundation}: Successful transition from BIOS handoff to a stable 64-bit Long Mode environment with identity-mapped 4-level paging.
+            \item \textbf{Multicore Concurrency}: Implementation of a preemptive SMP scheduler supporting per-CPU runqueues and dynamic task stealing.
+            \item \textbf{Memory Integrity}: Development of a high-performance hybrid Physical Memory Manager and a fragmented-resistant Slab Allocator.
+            \item \textbf{Rich Observability}: Integration of real-time telemetry (KStats) and high-speed tracing (KTrace) for deep-system debugging.
+            \item \textbf{Hardware Interoperability}: Foundations for XHCI (USB 3.0), Intel E1000 networking, and a unified TTY multiplexing layer.
+        \end{itemize}
+    };
+\end{tikzpicture}
+\end{center}
+
+\vspace{1cm}
+
+Baseline kernel OS is more than just a proof-of-concept; it is a modular research platform designed for extensibility. The project achieves its educational mission by providing a transparent mapping between theoretical OS concepts and their low-level C and Assembly implementations. As outlined in the roadmap, the future of the project lies in achieving self-hosting status and exploring distributed AI runtimes, continuing the pursuit of efficient and observable system design.
+
+\newpage
+
+% --- 11. RESEARCH & REFERENCES ---
 \chapter{Research \& References}
 The development of Baseline kernel OS was informed by extensive research into x86\_64 architecture, low-level systems programming, and modern kernel design paradigms. The following resources served as primary technical references.
 
