@@ -254,7 +254,24 @@ The transition from a powered-off state to a running 64-bit environment involves
 \chapter{Core Kernel Systems}
 
 \section{Physical Memory Manager (PMM)}
-The PMM uses a stack-based frame allocator combined with a bitmap.
+The PMM uses a stack-based frame allocator combined with a bitmap for high-performance memory tracking.
+
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm]
+    \draw[thick] (0,0) rectangle (8,1) node[midway] {Physical Memory (RAM)};
+    \foreach \x in {0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5}
+        \draw (\x,0) -- (\x,1);
+    
+    \node (center) at (4,0.5) {};
+    \node (stack) [draw, fill=zoho-blue!20, minimum width=2cm, minimum height=3cm, below=of center] {Free Frame Stack};
+    \draw[->, ultra thick, zoho-blue] (stack.north) -- (4,0) node[midway, right] {Push/Pop};
+    
+    \node (bitmap) [draw, fill=zoho-green!20, minimum width=3cm, minimum height=0.8cm, right=of stack] {Bitmap Tracker};
+    \draw[<->, dashed] (bitmap.west) -- (stack.east) node[midway, above, font=\tiny] {Sync};
+    
+    \node at (4,-4) {\textbf{PMM Frame Allocation Mechanics}};
+\end{tikzpicture}
+\end{center}
 
 \section{Virtual Memory Manager (VMM)}
 Baseline kernel OS implements a 4-level paging system.
@@ -283,8 +300,53 @@ Baseline kernel OS manages hardware asynchronous events through a centralized In
 \end{tikzpicture}
 \end{center}
 
+\section{SMP Scheduler \& Task Management}
+The scheduler implements a multicore round-robin algorithm with per-CPU runqueues and task stealing for dynamic load balancing.
+
+\begin{center}
+\begin{tikzpicture}[
+    cpu/.style={draw, fill=zoho-red!20, minimum width=2cm, minimum height=1cm, rounded corners},
+    task/.style={draw, fill=zoho-blue!20, minimum width=1.5cm, font=\tiny},
+    link/.style={->, ultra thick}
+]
+    \node (cpu0) [cpu] {CPU 0};
+    \node (cpu1) [cpu, right=4cm of cpu0] {CPU 1};
+    
+    \node (q0_1) [task, below=0.5cm of cpu0] {Task A};
+    \node (q0_2) [task, below=0.1cm of q0_1] {Task B};
+    \node (q0_3) [task, below=0.1cm of q0_2] {Task C};
+    
+    \node (q1_1) [task, below=0.5cm of cpu1] {Task D};
+    
+    \draw [link, zoho-red] (q0_3.east) .. controls +(2,-0.5) and +(-2,-0.5) .. (q1_1.west) 
+        node[midway, above, font=\small] {Task Stealing};
+        
+    \node at (3,-3.5) {\textbf{SMP Multiprocessing \& Load Balancing}};
+\end{tikzpicture}
+\end{center}
+
 \section{Virtual File System (VFS)}
-The VFS layer abstracts underlying storage formats (TAR, EXT2) into a unified tree structure. 
+The VFS layer abstracts underlying storage formats (TAR, EXT2) into a unified tree structure, allowing standardized access to diverse data sources.
+
+\begin{center}
+\begin{tikzpicture}[
+    layer/.style={draw, fill=zoho-blue!10, text width=6cm, text centered, minimum height=0.8cm, rounded corners},
+    driver/.style={draw, fill=zoho-green!20, text width=2.5cm, text centered, minimum height=0.8cm}
+]
+    \node (vfs) [layer] {VFS Common Interface (open/read/write)};
+    \node (path) [layer, below=0.6cm of vfs] {Pathname Resolver / Mount Table};
+    
+    \node (tar) [driver, below left=1cm and 0.5cm of path] {Initrd (TAR)};
+    \node (ext2) [driver, below right=1cm and 0.5cm of path] {Storage (EXT2)};
+    
+    \draw [->, thick] (vfs) -- (path);
+    \draw [->, thick] (path) -- (tar);
+    \draw [->, thick] (path) -- (ext2);
+    
+    \node at (0,-4) {\textbf{VFS Abstraction Hierarchy}};
+\end{tikzpicture}
+\end{center}
+
 \begin{itemize}
     \item \textbf{Disk-backed TAR:} Used for the initial ramdisk and system applications.
     \item \textbf{Device Nodes:} Support for \texttt{/dev/tty} and \texttt{/dev/serial}.
@@ -299,6 +361,24 @@ Baseline kernel OS includes built-in observability tools that track kernel perfo
 
 \section{Terminal Abstraction (TTY)}
 The TTY layer provides a unified interface for text-based communication, multiplexing output between the local VGA framebuffer and the remote Serial (COM1) port.
+
+\begin{center}
+\begin{tikzpicture}[
+    io/.style={draw, fill=zoho-blue!20, minimum width=2.5cm, minimum height=1cm},
+    tty/.style={draw, fill=white, ultra thick, minimum width=4cm, minimum height=1.2cm, rounded corners}
+]
+    \node (shell) [io] {Shell / klog};
+    \node (tty) [tty, right=2cm of shell] {TTY Multiplexer};
+    \node (vga) [io, above right=0.5cm and 2cm of tty] {VGA Display};
+    \node (serial) [io, below right=0.5cm and 2cm of tty] {Serial Port};
+    
+    \draw [->, ultra thick] (shell) -- (tty);
+    \draw [->, ultra thick, zoho-blue] (tty) -- (vga.west);
+    \draw [->, ultra thick, zoho-blue] (tty) -- (serial.west);
+    
+    \node at (4,-2.5) {\textbf{TTY Output Multiplexing Flow}};
+\end{tikzpicture}
+\end{center}
 
 \section{USB Support (XHCI)}
 Baseline kernel OS features an eXtensible Host Controller Interface (XHCI) driver foundation, enabling high-speed communication with USB 3.0 devices such as human interface devices (HID) and mass storage.
