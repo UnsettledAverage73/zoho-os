@@ -341,10 +341,27 @@ The heap and PMM were conflicting on the same physical range.
 
 % --- 8. FUTURE ROADMAP ---
 \chapter{Future Roadmap}
+Baseline kernel OS is envisioned as a continuously evolving platform for systems research and education. The following roadmap outlines the strategic technical goals categorized by implementation horizon.
+
+\section{Short-Term: Stabilization \& Core I/O}
 \begin{itemize}
-    \item GPU Acceleration via VirtIO.
-    \item Custom Ext2/Ext4 Filesystem.
-    \item Distributed Runtime for AI Inference.
+    \item \textbf{Complete XHCI Driver}: Move beyond the initialization stub to support USB HID (Keyboards/Mice) and Mass Storage protocols via the XHCI controller.
+    \item \textbf{FAT32 Filesystem Support}: Implement a read/write driver for FAT32 to enable interoperability with standard bootable media and easier data exchange.
+    \item \textbf{Userspace Standard Library (libc)}: Develop a minimal C standard library to provide a stable API for userland application development, moving away from direct inline assembly syscalls.
+\end{itemize}
+
+\section{Mid-Term: Performance \& Compatibility}
+\begin{itemize}
+    \item \textbf{VirtIO Hardware Acceleration}: Implement VirtIO drivers for GPU and Network interfaces to achieve near-native performance in virtualized environments like QEMU and KVM.
+    \item \textbf{Advanced Scheduling}: Transition the round-robin scheduler to a multi-level feedback queue (MLFQ) or a Completely Fair Scheduler (CFS) to better handle diverse workloads.
+    \item \textbf{POSIX Signal Handling}: Implement a basic signal architecture to support standard process communication and exception handling in userland.
+\end{itemize}
+
+\section{Long-Term: Self-Hosting \& Distributed Systems}
+\begin{itemize}
+    \item \textbf{Self-Hosting Environment}: The ultimate milestone is to port a C compiler (like TCC or a minimal GCC) and an assembler to Baseline kernel OS, allowing the kernel to be recompiled from within itself.
+    \item \textbf{Distributed Runtime for AI}: Research and implement a lightweight distributed memory architecture to support partitioned AI inference tasks across multiple network-linked OS instances.
+    \item \textbf{Full Graphical Desktop Environment (DE)}: Expand the current window manager into a full-featured DE with a taskbar, file manager, and system settings suite.
 \end{itemize}
 
 \newpage

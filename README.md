@@ -113,6 +113,25 @@ make run    # Execute in QEMU with XHCI and USB support
 
 ---
 
+## 🗺️ Future Roadmap
+
+### 📍 Short-Term: Core I/O
+- **XHCI Device Drivers**: Support for USB HID and Mass Storage.
+- **FAT32 Filesystem**: Read/write support for standard media.
+- **Userspace libc**: Stable C library for application development.
+
+### 📍 Mid-Term: Performance
+- **VirtIO Acceleration**: Near-native GPU and Network performance.
+- **Advanced Scheduling**: Transition to MLFQ or CFS algorithms.
+- **Signal Architecture**: Implementation of POSIX signal handling.
+
+### 📍 Long-Term: Vision
+- **Self-Hosting**: Porting a C compiler to recompile the kernel natively.
+- **AI Runtimes**: Distributed memory support for edge AI inference.
+- **Full Desktop Environment**: Modern, high-resolution GUI suite.
+
+---
+
 ## ⚖️ License
 This project is licensed under the **MIT License**. See the full text at the bottom of the technical report.
 
