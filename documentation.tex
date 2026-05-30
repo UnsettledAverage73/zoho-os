@@ -14,18 +14,22 @@
 \usepackage{amsmath}
 \usepackage{fancyhdr}
 
-% Configure professional headers
+% Configure professional headers to match reference image
+\setlength{\headheight}{14.5pt}
+\addtolength{\topmargin}{-2.5pt}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\leftmark}
+\fancyhead[L]{\itshape\leftmark}
 \fancyhead[R]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\chaptermark}[1]{\markboth{Chapter \thechapter.\ #1}{}}
 
-% Ensure plain style (used on chapter starts) matches or is acceptable
+% Force headers on chapter start pages (usually 'plain' style)
 \fancypagestyle{plain}{
   \fancyhf{}
+  \fancyhead[L]{\itshape\leftmark}
   \fancyhead[R]{\thepage}
-  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\headrulewidth}{0.4pt}
 }
 
 % Colors for the Mocha/Zoho theme
