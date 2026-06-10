@@ -1,8 +1,8 @@
 // @ts-check
 
 const config = {
-  title: "Zoho OS Docs",
-  tagline: "Architecture and boot sequence documentation for Zoho OS",
+  title: "Zoho OS Documentation",
+  tagline: "A clean guide to the boot flow, kernel architecture, and user space",
   url: "https://example.com",
   baseUrl: "/",
   organizationName: "zoho-os",
@@ -35,14 +35,24 @@ const config = {
   ],
   themeConfig: {
     colorMode: {
-      defaultMode: "dark",
+      defaultMode: "light",
       disableSwitch: false,
       respectPrefersColorScheme: true
     },
     navbar: {
-      title: "Zoho OS Docs",
+      title: "Zoho OS",
       hideOnScroll: true,
       items: [
+        {
+          to: "/",
+          position: "left",
+          label: "Home"
+        },
+        {
+          to: "/overview",
+          position: "left",
+          label: "Overview"
+        },
         {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
@@ -50,21 +60,52 @@ const config = {
           label: "Boot Sequence"
         },
         {
-          to: "/",
-          label: "Overview",
+          to: "/architecture",
+          position: "left",
+          label: "Architecture"
+        },
+        {
+          to: "/build-and-run",
+          position: "left",
+          label: "Build"
+        },
+        {
+          href: "https://github.com/UnsettledAverage73/zoho-os",
+          label: "Source",
           position: "right"
         }
       ]
     },
     footer: {
-      style: "dark",
+      style: "light",
       links: [
         {
-          title: "Core Docs",
+          title: "Docs",
           items: [
+            {
+              label: "Overview",
+              to: "/overview"
+            },
             {
               label: "Boot Sequence",
               to: "/boot/00-overview"
+            },
+            {
+              label: "Architecture",
+              to: "/architecture"
+            }
+          ]
+        },
+        {
+          title: "Project",
+          items: [
+            {
+              label: "Build and Run",
+              to: "/build-and-run"
+            },
+            {
+              label: "Source Code",
+              href: "https://github.com/UnsettledAverage73/zoho-os"
             }
           ]
         }

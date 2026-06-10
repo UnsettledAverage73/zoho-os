@@ -4,89 +4,155 @@ title: Zoho OS Documentation
 slug: /
 ---
 
+# Zoho OS Documentation
+
+Zoho OS is a teaching-oriented x86_64 kernel. This site explains the project in a simple order:
+
+1. what the system is
+2. how it is built
+3. how it boots from GRUB into 64-bit mode
+4. how the kernel initializes memory, drivers, tasks, and user space
+
 <div className="landingHero">
   <div className="landingHero__grid">
     <div>
-      <div className="eyebrow">Zoho OS Documentation</div>
-      <h1>Technical documentation for the Zoho OS kernel.</h1>
+      <div className="eyebrow">Documentation home</div>
+      <h2>Start with the architecture, then follow the boot path.</h2>
       <p className="landingLead">
-        This site documents the system from the real boot path upward, starting with the transition from
-        GRUB handoff to <code>kmain()</code>. The goal is to make the codebase easier to understand,
-        maintain, and extend.
+        The documentation is organized to match the codebase. The top-level pages explain the project
+        at a high level, and the boot sequence pages walk through the exact assembly and C handoff that
+        brings the kernel up.
       </p>
 
       <div className="landingActions">
-        <a className="landingButton landingButton--primary" href="/boot/00-overview">
-          View Boot Sequence
+        <a className="landingButton landingButton--primary" href="/overview">
+          Read the overview
         </a>
-        <a className="landingButton" href="/boot/09-64-bit-entry">
-          View 64-bit Entry
+        <a className="landingButton" href="/boot/00-overview">
+          Start boot sequence
+        </a>
+        <a className="landingButton" href="/build-and-run">
+          Build and run
         </a>
       </div>
     </div>
 
     <div className="statusPanel">
-      <div className="statusPanel__title">Current Scope</div>
+      <div className="statusPanel__title">What the site covers</div>
       <div className="statusRow">
-        <span>Primary section</span>
-        <strong>Boot sequence</strong>
+        <span>System type</span>
+        <strong>x86_64 research kernel</strong>
       </div>
       <div className="statusRow">
-        <span>Assembly sources</span>
-        <strong><code>src/boot/*.asm</code></strong>
+        <span>Boot chain</span>
+        <strong>BIOS / UEFI → GRUB → kernel</strong>
+      </div>
+      <div className="statusRow">
+        <span>Primary entry</span>
+        <strong><code>src/boot/main.asm</code></strong>
       </div>
       <div className="statusRow">
         <span>Kernel entry</span>
-        <strong><code>src/kernel/main.c</code></strong>
-      </div>
-      <div className="statusRow">
-        <span>Documentation model</span>
-        <strong>Step-based technical reference</strong>
+        <strong><code>src/kernel/core/main.c</code></strong>
       </div>
     </div>
   </div>
 </div>
 
-<div className="featureGrid">
-  <div className="featureCard">
-    <div className="featureCard__kicker">Structure</div>
-    <h2>Boot sequence first</h2>
+<div className="quickGrid">
+  <div className="docCard">
+    <div className="docCard__kicker">Overview</div>
+    <h3>What the project contains</h3>
     <p>
-      The first section covers the most sensitive path in the system: the transition from GRUB’s
-      32-bit environment into the 64-bit kernel.
+      A readable summary of the kernel, its boot flow, memory managers, drivers, scheduler, shell, and
+      user-space entry points.
+    </p>
+    <p>
+      <a href="/overview">Open the overview</a>
     </p>
   </div>
 
-  <div className="featureCard">
-    <div className="featureCard__kicker">Sources</div>
-    <h2>Linked to the implementation</h2>
+  <div className="docCard">
+    <div className="docCard__kicker">Build</div>
+    <h3>How to build and boot it</h3>
     <p>
-      Each page maps back to the current assembly and C sources so the documentation remains useful as an
-      engineering reference.
+      The exact prerequisites and commands needed to produce the ISO, generate the boot media, and run
+      it in QEMU.
+    </p>
+    <p>
+      <a href="/build-and-run">Open build guide</a>
     </p>
   </div>
 
-  <div className="featureCard">
-    <div className="featureCard__kicker">Expansion</div>
-    <h2>Prepared for additional subsystems</h2>
+  <div className="docCard">
+    <div className="docCard__kicker">Boot</div>
+    <h3>GRUB to 64-bit kernel</h3>
     <p>
-      The same format can be extended to GDT, IDT, PMM, VMM, scheduling, shell, and debugging topics
-      without restructuring the site.
+      A step-by-step explanation of the Multiboot2 header, paging setup, long mode transition, and
+      the first `kmain()` call.
+    </p>
+    <p>
+      <a href="/boot/00-overview">Open boot sequence</a>
     </p>
   </div>
 </div>
 
-## Current coverage
+## Reading order
 
-- GRUB handoff and Multiboot2 entry assumptions
-- Stack setup and bootstrap page table preparation
-- `CR4.PAE`, `EFER.LME`, and `CR0.PG` transition points
-- 64-bit GDT jump and the handoff to `kmain()`
-- Common failure cases that lead to hangs or triple faults
+If you want the shortest path through the docs, read them in this order:
 
-## Next likely sections
+1. [Project overview](/overview)
+2. [Build and run](/build-and-run)
+3. [Boot sequence overview](/boot/00-overview)
+4. [64-bit entry and `kmain`](/boot/09-64-bit-entry)
+5. [CPU feature checks](/boot/12-cpu-checks)
+6. [Architecture guide](/architecture)
+7. [GDT and TSS](/core/00-gdt-tss)
+8. [IDT and interrupts](/core/01-idt-interrupts)
+9. [PMM and VMM](/core/02-pmm)
+10. [Tasking and SMP](/core/04-tasking-smp)
+11. [Syscalls and user space](/core/05-syscalls-userspace)
+12. [Filesystems and shell](/core/06-filesystems-shell)
+13. [Graphics and window manager](/core/07-graphics-window)
+14. [PCI and storage](/core/08-pci-storage)
+15. [Networking](/core/09-networking)
+16. [Shell internals](/core/10-shell-internals)
 
-- GDT and TSS layout
-- IDT, PIC remap, and ISR entry flow
-- PMM and VMM design
-- Scheduler and shell internals
+## Source map
+
+<table className="summaryTable">
+  <thead>
+    <tr>
+      <th>Area</th>
+      <th>Primary files</th>
+      <th>What they do</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Boot</td>
+      <td><code>src/boot/*.asm</code></td>
+      <td>GRUB handoff, stack setup, paging, long mode, and entry into C.</td>
+    </tr>
+    <tr>
+      <td>Kernel core</td>
+      <td><code>src/kernel/core/*.c</code></td>
+      <td>Initialization, logging, tasking, syscalls, and shell launch.</td>
+    </tr>
+    <tr>
+      <td>Memory</td>
+      <td><code>src/kernel/mm/*.c</code></td>
+      <td>Physical frames, virtual mappings, and heap setup.</td>
+    </tr>
+    <tr>
+      <td>Drivers</td>
+      <td><code>src/kernel/drivers/*.c</code></td>
+      <td>Serial, VGA, keyboard, mouse, PCI, ATA, USB, and network devices.</td>
+    </tr>
+    <tr>
+      <td>User space</td>
+      <td><code>src/apps/shell/main.c</code></td>
+      <td>Interactive shell that calls kernel syscalls.</td>
+    </tr>
+  </tbody>
+</table>
