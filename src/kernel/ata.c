@@ -3,6 +3,7 @@
 #include "klog.h"
 
 static int ata_wait(uint8_t bit, int set) {
+    /* Poll the ATA status register until a condition is met or we time out. */
     uint32_t timeout = 1000000;
     while (timeout--) {
         uint8_t status = inb(ATA_PRIMARY_IO + ATA_REG_STATUS);
@@ -19,6 +20,7 @@ static int ata_wait(uint8_t bit, int set) {
 int ata_init() {
     klog(LOG_INFO, "ATA", "Initializing ATA driver (Polling mode)...");
     
+    /* Issue IDENTIFY to the primary master. */
     outb(ATA_PRIMARY_IO + ATA_REG_DRIVE, 0xA0);
     outb(ATA_PRIMARY_IO + ATA_REG_SECCOUNT, 0);
     outb(ATA_PRIMARY_IO + ATA_REG_LBA_LOW, 0);
@@ -35,6 +37,7 @@ int ata_init() {
     if (ata_wait(ATA_SR_BSY, 0) != 0) return -1;
     if (ata_wait(ATA_SR_DRQ, 1) != 0) return -1;
 
+    /* Drain the IDENTIFY data block. */
     for (int i = 0; i < 256; i++) inw(ATA_PRIMARY_IO + ATA_REG_DATA);
 
     klog(LOG_INFO, "ATA", "Primary Master detected.");
@@ -44,6 +47,7 @@ int ata_init() {
 void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     if (ata_wait(ATA_SR_BSY, 0) != 0) return;
 
+    /* Program a 28-bit LBA read command. */
     outb(ATA_PRIMARY_IO + ATA_REG_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     outb(ATA_PRIMARY_IO + ATA_REG_SECCOUNT, 1);
     outb(ATA_PRIMARY_IO + ATA_REG_LBA_LOW, (uint8_t)lba);
@@ -57,6 +61,7 @@ void ata_read_sector(uint32_t lba, uint8_t* buffer) {
         return;
     }
 
+    /* Read the 512-byte sector as 256 16-bit words. */
     uint16_t* ptr = (uint16_t*)buffer;
     for (int i = 0; i < 256; i++) {
         ptr[i] = inw(ATA_PRIMARY_IO + ATA_REG_DATA);
@@ -66,6 +71,7 @@ void ata_read_sector(uint32_t lba, uint8_t* buffer) {
 void ata_write_sector(uint32_t lba, uint8_t* buffer) {
     if (ata_wait(ATA_SR_BSY, 0) != 0) return;
 
+    /* Program a 28-bit LBA write command. */
     outb(ATA_PRIMARY_IO + ATA_REG_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     outb(ATA_PRIMARY_IO + ATA_REG_SECCOUNT, 1);
     outb(ATA_PRIMARY_IO + ATA_REG_LBA_LOW, (uint8_t)lba);
@@ -79,6 +85,7 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
         return;
     }
 
+    /* Write the 512-byte sector as 256 16-bit words. */
     uint16_t* ptr = (uint16_t*)buffer;
     for (int i = 0; i < 256; i++) {
         outw(ATA_PRIMARY_IO + ATA_REG_DATA, ptr[i]);

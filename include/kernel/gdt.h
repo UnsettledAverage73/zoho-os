@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+/**
+ * @file gdt.h
+ * @brief Global Descriptor Table and TSS definitions.
+ */
+
 struct gdt_entry {
     uint16_t limit_low;
     uint16_t base_low;
@@ -12,11 +17,17 @@ struct gdt_entry {
     uint8_t base_high;
 } __attribute__((packed));
 
+/**
+ * GDT pointer used by lgdt.
+ */
 struct gdt_ptr {
     uint16_t limit;
     uint64_t base;
 } __attribute__((packed));
 
+/**
+ * Task State Segment layout for ring transitions.
+ */
 struct tss_entry {
     uint32_t reserved0;
     uint64_t rsp0;
@@ -35,6 +46,9 @@ struct tss_entry {
     uint16_t iopb_offset;
 } __attribute__((packed));
 
+/**
+ * 16-byte TSS descriptor layout.
+ */
 struct gdt_tss_entry {
     uint16_t limit_low;
     uint16_t base_low;
@@ -46,7 +60,14 @@ struct gdt_tss_entry {
     uint32_t reserved;
 } __attribute__((packed));
 
+/**
+ * Initialize the per-CPU GDT and TSS.
+ */
 void gdt_init();
+
+/**
+ * Update ring-0 stack pointer in the current CPU's TSS.
+ */
 void tss_set_rsp0(uint64_t rsp);
 
 #endif

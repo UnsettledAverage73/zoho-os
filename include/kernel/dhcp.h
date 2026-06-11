@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+/**
+ * @file dhcp.h
+ * @brief DHCP client packet definitions.
+ */
+
 #define DHCP_BOOTREQUEST 1
 #define DHCP_BOOTREPLY   2
 
@@ -43,7 +48,14 @@ typedef struct {
     uint8_t  options[];
 } __attribute__((packed)) dhcp_packet_t;
 
+/**
+ * Register the DHCP client handler.
+ */
 void dhcp_init();
+
+/**
+ * Broadcast a DHCPDISCOVER message.
+ */
 void dhcp_discover();
 
 #endif

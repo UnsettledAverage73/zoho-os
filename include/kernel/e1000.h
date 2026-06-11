@@ -3,10 +3,15 @@
 
 #include <stdint.h>
 
+/**
+ * @file e1000.h
+ * @brief Intel E1000 network adapter interface.
+ */
+
 #define E1000_VENDOR_ID 0x8086
 #define E1000_DEVICE_ID 0x100E
 
-// Register Offsets
+/* Register offsets. */
 #define REG_CTRL          0x0000
 #define REG_STATUS        0x0008
 #define REG_EECD          0x0010
@@ -31,12 +36,12 @@
 #define REG_RAL           0x5400
 #define REG_RAH           0x5404
 
-// CTRL Bits
+/* CTRL bits. */
 #define CTRL_RST          (1 << 26)
 #define CTRL_SLU          (1 << 6)
 #define CTRL_ASDE         (1 << 5)
 
-// RCTL Bits
+/* Receive control bits. */
 #define RCTL_EN           (1 << 1)
 #define RCTL_SBP          (1 << 2)
 #define RCTL_UPE          (1 << 3)
@@ -49,7 +54,7 @@
 #define RCTL_BSIZE_2048   (0 << 16)
 #define RCTL_SECRC        (1 << 26)
 
-// TCTL Bits
+/* Transmit control bits. */
 #define TCTL_EN           (1 << 1)
 #define TCTL_PSP          (1 << 3)
 #define TCTL_CT           (0x10 << 4)
@@ -79,9 +84,24 @@ typedef struct {
     uint8_t mac[6];
 } e1000_device_t;
 
+/**
+ * Initialize an Intel E1000 device found on PCI.
+ */
 void e1000_init(uint8_t bus, uint8_t slot, uint8_t func);
+
+/**
+ * Send a packet through the transmit ring.
+ */
 void e1000_send_packet(const void* data, uint16_t len);
+
+/**
+ * Poll the receive ring for completed packets.
+ */
 void e1000_poll();
+
+/**
+ * Copy the NIC MAC address into the caller buffer.
+ */
 void e1000_get_mac(uint8_t* mac);
 
 #endif

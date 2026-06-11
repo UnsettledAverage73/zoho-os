@@ -2,6 +2,12 @@
 #include "window.h"
 #include "syscall.h"
 
+/*
+ * Minimal user-space GUI demo.
+ *
+ * It creates a window, draws into the shared buffer, and polls for events
+ * through the syscall interface.
+ */
 void user_gui_app() {
     uint32_t win_id;
     __asm__ volatile (
@@ -16,6 +22,7 @@ void user_gui_app() {
         : "rdi", "rsi", "rdx", "r10", "rcx", "r11"
     );
 
+    /* The kernel maps each window buffer at a predictable user-space address. */
     uint32_t* buf = (uint32_t*)(0xA0000000 + (uint64_t)win_id * 0x1000000);
     uint32_t color = 0xFFFF0000; // Red
     uint32_t frames = 0;

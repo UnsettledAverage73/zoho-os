@@ -15,6 +15,7 @@ struct sector_cache {
 static struct sector_cache cache = {0, {0}, 0};
 
 static void cached_read_sector(uint32_t lba, uint8_t* buffer) {
+    /* Tiny one-sector cache to reduce repeated ATA reads. */
     if (cache.valid && cache.lba == lba) {
         memcpy(buffer, cache.data, 512);
         return;
@@ -26,6 +27,7 @@ static void cached_read_sector(uint32_t lba, uint8_t* buffer) {
 }
 
 void cached_write_sector(uint32_t lba, uint8_t* buffer) {
+    /* Keep the cache coherent after sector writes. */
     ata_write_sector(lba, buffer);
     memcpy(cache.data, buffer, 512);
     cache.lba = lba;
@@ -33,6 +35,7 @@ void cached_write_sector(uint32_t lba, uint8_t* buffer) {
 }
 
 static uint32_t octal_to_int(const char* oct) {
+    /* TAR stores sizes as ASCII octal. */
     uint32_t res = 0;
     for (int i = 0; i < 11; i++) {
         if (oct[i] < '0' || oct[i] > '7') break;
@@ -42,11 +45,13 @@ static uint32_t octal_to_int(const char* oct) {
 }
 
 void tar_init_disk(uint32_t start_lba) {
+    /* Remember where the TAR image starts on disk. */
     tar_start_lba = start_lba;
     klog(LOG_INFO, "TAR", "Disk-backed TAR initialized.");
 }
 
 int tar_find_file(const char* name, uint32_t* out_lba, uint32_t* out_size) {
+    /* Walk TAR headers until the requested file is found. */
     uint32_t current_lba = tar_start_lba;
     uint8_t buffer[512];
     tar_header_t* header = (tar_header_t*)buffer;
@@ -64,7 +69,7 @@ int tar_find_file(const char* name, uint32_t* out_lba, uint32_t* out_size) {
         uint32_t size = octal_to_int(header->size);
         current_lba += 1 + ((size + 511) / 512);
         
-        // Safety break
+        /* Safety break to avoid wandering off into bad disk data. */
         if (current_lba > tar_start_lba + 20000) break; 
     }
 
@@ -72,6 +77,7 @@ int tar_find_file(const char* name, uint32_t* out_lba, uint32_t* out_size) {
 }
 
 int tar_get_file_by_index(int index, char* out_name) {
+    /* Enumerate TAR entries by linear scan. */
     uint32_t current_lba = tar_start_lba;
     uint8_t buffer[512];
     tar_header_t* header = (tar_header_t*)buffer;

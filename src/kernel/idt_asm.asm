@@ -5,6 +5,7 @@ section .text
 bits 64
 
 idt_flush:
+    ; Load the new IDT pointer.
     lidt [rdi]
     ret
 
@@ -65,7 +66,7 @@ ISR_NOERRCODE 31
 %endrep
 
 isr_common_stub:
-    ; Push all registers to create a full interrupt frame
+    ; Save caller state before entering the C interrupt handler.
     push rax
     push rbx
     push rcx
@@ -82,20 +83,20 @@ isr_common_stub:
     push r14
     push r15
 
-    ; Check if we came from user mode
+    ; Detect ring 3 entries so swapgs can be applied correctly.
     test qword [rsp + 18*8], 3 ; CS is 18th qword from top of stack
     jz .kernel_entry
     swapgs
 .kernel_entry:
 
-    ; Call C handler with current stack pointer
+    ; Hand the full interrupt frame to C.
     mov rdi, rsp
     call isr_handler
     
-    ; The C handler returns the new (or same) stack pointer in RAX
+    ; The C handler may return a different stack pointer after scheduling.
     mov rsp, rax
 
-    ; Check if we are returning to user mode
+    ; If returning to user mode, restore user data segments and swapgs back.
     test qword [rsp + 18*8], 3
     jz .kernel_exit
     
@@ -107,7 +108,7 @@ isr_common_stub:
     swapgs
 .kernel_exit:
 
-    ; Pop all registers from the (potentially new) stack
+    ; Restore saved registers from the selected return frame.
     pop r15
     pop r14
     pop r13
@@ -124,6 +125,6 @@ isr_common_stub:
     pop rbx
     pop rax
 
-    ; Cleanup error code and int number
+    ; Drop the synthetic interrupt metadata and return to the interrupted RIP.
     add rsp, 16
     iretq

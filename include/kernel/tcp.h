@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include "net.h"
 
+/**
+ * @file tcp.h
+ * @brief Minimal TCP connection state machine.
+ */
+
 typedef enum {
     TCP_STATE_CLOSED,
     TCP_STATE_LISTEN,
@@ -29,7 +34,14 @@ typedef struct {
     uint32_t remote_ack;
 } tcp_conn_t;
 
+/**
+ * Initialize the TCP subsystem.
+ */
 void tcp_init();
+
+/**
+ * Start a TCP connection to a remote peer.
+ */
 void tcp_connect(const uint8_t* ip, uint16_t port);
 
 #endif

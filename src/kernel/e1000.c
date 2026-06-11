@@ -22,10 +22,12 @@ static uint8_t mac_addr[6];
 #define NUM_TX_DESCS 128
 
 static void write_reg(uint16_t reg, uint32_t val) {
+    /* E1000 registers are MMIO, not port I/O. */
     *(volatile uint32_t*)(mmio_base + reg) = val;
 }
 
 static uint32_t read_reg(uint16_t reg) {
+    /* Read one MMIO register from the NIC. */
     return *(volatile uint32_t*)(mmio_base + reg);
 }
 
@@ -46,6 +48,7 @@ void e1000_get_mac(uint8_t* mac) {
 }
 
 void e1000_send_packet(const void* data, uint16_t len) {
+    /* Fill one transmit descriptor and advance the tail pointer. */
     tx_descs[tx_tail].length = len;
     tx_descs[tx_tail].status = 0;
     tx_descs[tx_tail].cmd = (1 << 3) | (1 << 0); // RS (Report Status) | EOP (End of Packet)
@@ -62,6 +65,7 @@ void e1000_send_packet(const void* data, uint16_t len) {
 void e1000_poll() {
     if (!mmio_base) return;
 
+    /* Drain completed receive descriptors. */
     while (rx_descs[rx_cur].status & 0x1) { // 0x1 is DD (Descriptor Done)
         uint16_t len = rx_descs[rx_cur].length;
         void* data = (void*)rx_descs[rx_cur].addr;
@@ -78,13 +82,13 @@ void e1000_poll() {
 void e1000_init(uint8_t bus, uint8_t slot, uint8_t func) {
     klog(LOG_INFO, "E1000", "Initializing Intel E1000 NIC...");
 
-    // Read BAR0 (MMIO Base Address)
+    /* Read BAR0 to locate the MMIO register window. */
     uint32_t bar0 = pci_config_read(bus, slot, func, 0x10);
     uint64_t phys_addr = bar0 & ~0xF;
     
     klog(LOG_INFO, "E1000", "BAR0 Physical Address: 0x%x", phys_addr);
 
-    // Map BAR0 to virtual memory
+    /* Identity-map the MMIO range so the driver can access it. */
     uint64_t cr3;
     __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
     
@@ -93,30 +97,30 @@ void e1000_init(uint8_t bus, uint8_t slot, uint8_t func) {
     }
     mmio_base = phys_addr;
 
-    // Enable PCI Bus Mastering
+    /* Enable bus mastering and memory-space access. */
     uint32_t command = pci_config_read(bus, slot, func, 0x04);
     command |= (1 << 2); // Bus Master
     command |= (1 << 1); // Memory Space
     pci_config_write(bus, slot, func, 0x04, command);
 
-    // 1. Reset the device
+    /* Reset the device. */
     write_reg(REG_CTRL, read_reg(REG_CTRL) | CTRL_RST);
     for(int i = 0; i < 10000; i++) __asm__ ("pause");
 
-    // 2. Set Link Up
+    /* Bring the link up and enable auto speed detection. */
     write_reg(REG_CTRL, read_reg(REG_CTRL) | CTRL_SLU | CTRL_ASDE);
 
-    // 3. Initialize Multicast Table Array (zeros)
+    /* Clear the multicast table. */
     for (int i = 0; i < 128; i++) {
         write_reg(REG_MTA + (i * 4), 0);
     }
 
-    // 4. Read MAC Address
+    /* Read the MAC address from the RAL/RAH registers. */
     e1000_read_mac();
     klog(LOG_INFO, "E1000", "MAC Address: %x:%x:%x:%x:%x:%x", 
          mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
 
-    // 5. Setup Receive Descriptors
+    /* Set up the receive ring and buffers. */
     rx_descs = kmalloc(sizeof(e1000_rx_desc_t) * NUM_RX_DESCS + 16);
     rx_descs = (e1000_rx_desc_t*)(((uint64_t)rx_descs + 15) & ~15);
     memset(rx_descs, 0, sizeof(e1000_rx_desc_t) * NUM_RX_DESCS);
@@ -136,7 +140,7 @@ void e1000_init(uint8_t bus, uint8_t slot, uint8_t func) {
     write_reg(REG_RDT, NUM_RX_DESCS - 1);
     write_reg(REG_RCTL, RCTL_EN | RCTL_SBP | RCTL_UPE | RCTL_MPE | RCTL_BAM | RCTL_SECRC | RCTL_BSIZE_2048);
 
-    // 6. Setup Transmit Descriptors
+    /* Set up the transmit ring and buffers. */
     tx_descs = kmalloc(sizeof(e1000_tx_desc_t) * NUM_TX_DESCS + 16);
     tx_descs = (e1000_tx_desc_t*)(((uint64_t)tx_descs + 15) & ~15);
     memset(tx_descs, 0, sizeof(e1000_tx_desc_t) * NUM_TX_DESCS);

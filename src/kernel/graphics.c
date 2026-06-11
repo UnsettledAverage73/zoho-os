@@ -12,6 +12,7 @@ static uint32_t fb_pitch = 0;
 static uint8_t fb_bpp = 0;
 
 static int clip_rect(rect_t* rect) {
+    /* Clamp drawing operations to the framebuffer bounds. */
     int32_t x2 = rect->x + rect->w;
     int32_t y2 = rect->y + rect->h;
 
@@ -28,6 +29,7 @@ static int clip_rect(rect_t* rect) {
 void graphics_init(struct multiboot_tag_framebuffer* tag) {
     klog(LOG_INFO, "GRAPHICS", "Initializing Framebuffer...");
     
+    /* Cache the framebuffer geometry returned by GRUB. */
     fb_width = tag->width;
     fb_height = tag->height;
     fb_pitch = tag->pitch;
@@ -36,16 +38,18 @@ void graphics_init(struct multiboot_tag_framebuffer* tag) {
     uint64_t phys_addr = tag->addr;
     fb_addr = phys_addr; 
     
+    /* Compute the framebuffer byte size from pitch and height. */
     uint64_t fb_size = fb_pitch * fb_height;
     uint64_t cr3;
     __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
     
-    // Use optimized range mapping (supports huge pages automatically)
+    /* Map the framebuffer into the current address space. */
     vmm_map_range((void*)cr3, fb_addr, phys_addr, fb_size, PAGE_WRITABLE | PAGE_PRESENT | (1 << 3) | (1 << 4)); // PWT | PCD
     
-    // Reload CR3
+    /* Flush the TLB after adding the mapping. */
     __asm__ volatile ("mov %%cr3, %%rax\nmov %%rax, %%cr3" ::: "rax");
     
+    /* Backbuffer lives in normal kernel memory. */
     backbuffer = kmalloc(fb_size);
     if (!backbuffer) {
         klog(LOG_ERROR, "GRAPHICS", "Failed to allocate backbuffer (size: %d)", fb_size);
@@ -149,6 +153,7 @@ void graphics_draw_string(uint32_t* buf, uint32_t w, uint32_t x, uint32_t y, con
 
 void graphics_swap() {
     if (!backbuffer || !fb_addr) return;
+    /* Full-screen blit from backbuffer to framebuffer. */
     memcpy((void*)fb_addr, backbuffer, fb_pitch * fb_height);
 }
 
@@ -160,6 +165,7 @@ void graphics_swap_rects(const rect_t* rects, uint32_t count) {
         if (!clip_rect(&rect)) continue;
 
         for (int32_t row = 0; row < rect.h; row++) {
+            /* Copy one dirty scanline at a time. */
             uint8_t* dst = (uint8_t*)fb_addr + (uint64_t)(rect.y + row) * fb_pitch + (uint64_t)rect.x * 4;
             uint32_t* src = backbuffer + (uint64_t)(rect.y + row) * fb_width + rect.x;
             memcpy(dst, src, (uint64_t)rect.w * 4);
@@ -169,6 +175,7 @@ void graphics_swap_rects(const rect_t* rects, uint32_t count) {
 
 void graphics_put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     if (!backbuffer || x >= fb_width || y >= fb_height) return;
+    /* Draw into the backbuffer, not the framebuffer. */
     backbuffer[y * fb_width + x] = color;
 }
 
@@ -184,6 +191,7 @@ void graphics_draw_cursor(uint32_t x, uint32_t y) {
 
 void graphics_clear(uint32_t color) {
     if (!backbuffer) return;
+    /* Fill the entire backbuffer with one color. */
     for (uint32_t i = 0; i < fb_width * fb_height; i++) {
         backbuffer[i] = color;
     }
@@ -195,6 +203,7 @@ void graphics_clear_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t co
     rect_t rect = {x, y, w, h};
     if (!clip_rect(&rect)) return;
 
+    /* Clear only the requested region. */
     for (int32_t py = 0; py < rect.h; py++) {
         uint32_t* row = backbuffer + (uint64_t)(rect.y + py) * fb_width + rect.x;
         for (int32_t px = 0; px < rect.w; px++) {
@@ -205,6 +214,7 @@ void graphics_clear_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t co
 
 void graphics_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     if (!backbuffer) return;
+    /* Draw a filled rectangle one pixel at a time. */
     for (uint32_t i = 0; i < h; i++) {
         for (uint32_t j = 0; j < w; j++) {
             graphics_put_pixel(x + j, y + i, color);
@@ -214,6 +224,7 @@ void graphics_draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t
 
 void graphics_fill_rect_buffer(uint32_t* buf, uint32_t buf_w, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     if (!buf) return;
+    /* Fill a rectangle into an arbitrary pixel buffer. */
     for (uint32_t i = 0; i < h; i++) {
         uint32_t* row = buf + (uint64_t)(y + i) * buf_w + x;
         for (uint32_t j = 0; j < w; j++) {
@@ -224,6 +235,7 @@ void graphics_fill_rect_buffer(uint32_t* buf, uint32_t buf_w, uint32_t x, uint32
 
 void graphics_draw_line_buffer(uint32_t x, uint32_t y, uint32_t w, uint32_t* buffer) {
     if (!backbuffer || x + w > fb_width || y >= fb_height) return;
+    /* Copy a scanline buffer directly into the backbuffer. */
     uint32_t* dst = backbuffer + (uint64_t)y * fb_width + x;
     memcpy(dst, buffer, (uint64_t)w * 4);
 }

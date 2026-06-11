@@ -1,15 +1,15 @@
 section .multiboot_header
 header_start:
-    ; Magic number (multiboot 2)
+    ; Multiboot2 magic number.
     dd 0xe85250d6
-    ; Architecture 0 (protected mode i386)
+    ; Architecture 0 = protected-mode i386 handoff format.
     dd 0
-    ; Header length
+    ; Total header length, including tags.
     dd header_end - header_start
-    ; Checksum
+    ; Checksum so the 32-bit sum of the header is zero.
     dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
 
-    ; Framebuffer tag request
+    ; Request a graphics framebuffer from GRUB.
     align 8
     dw 5    ; type
     dw 0    ; flags (0 = required)

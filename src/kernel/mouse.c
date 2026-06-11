@@ -7,6 +7,7 @@ static int8_t mouse_byte[3];
 static int32_t mouse_x = 400, mouse_y = 300;
 
 static void mouse_wait(uint8_t type) {
+    /* Wait for PS/2 controller readiness. */
     uint32_t timeout = 100000;
     if (type == 0) {
         while (timeout--) {
@@ -20,6 +21,7 @@ static void mouse_wait(uint8_t type) {
 }
 
 static void mouse_write(uint8_t data) {
+    /* Send one byte to the auxiliary mouse device. */
     mouse_wait(1);
     outb(0x64, 0xD4);
     mouse_wait(1);
@@ -27,6 +29,7 @@ static void mouse_write(uint8_t data) {
 }
 
 static uint8_t mouse_read() {
+    /* Read one byte from the mouse data port. */
     mouse_wait(0);
     return inb(0x60);
 }
@@ -36,11 +39,11 @@ void mouse_init() {
 
     uint8_t status;
 
-    // Enable the auxiliary mouse device
+    /* Enable the auxiliary mouse device. */
     mouse_wait(1);
     outb(0x64, 0xA8);
 
-    // Enable interrupts
+    /* Enable mouse IRQ delivery through the controller. */
     mouse_wait(1);
     outb(0x64, 0x20);
     mouse_wait(0);
@@ -50,15 +53,15 @@ void mouse_init() {
     mouse_wait(1);
     outb(0x60, status);
 
-    // Use default settings
+    /* Switch to default packet settings. */
     mouse_write(0xF6);
     mouse_read();
 
-    // Enable data reporting
+    /* Begin streaming movement packets. */
     mouse_write(0xF4);
     mouse_read();
 
-    // Unmask IRQ12
+    /* Unmask IRQ12 on the PIC. */
     uint8_t master_mask = inb(0x21);
     outb(0x21, master_mask & ~(1 << 2));
     uint8_t mask = inb(0xA1);
@@ -68,6 +71,7 @@ void mouse_init() {
 }
 
 void mouse_handler() {
+    /* Accumulate three-byte PS/2 mouse packets. */
     uint8_t status = inb(0x64);
     if (!(status & 1) || !(status & 0x20)) return;
 
@@ -92,7 +96,7 @@ void mouse_handler() {
         if (mouse_x > 1024) mouse_x = 1024;
         if (mouse_y > 768) mouse_y = 768;
         
-        // For now, just a debug log (every 10 packets to avoid spam)
+        /* Periodic debug hook to avoid log spam. */
         static int count = 0;
         if (++count % 10 == 0) {
              // klog(LOG_DEBUG, "MOUSE", "Pos updated");

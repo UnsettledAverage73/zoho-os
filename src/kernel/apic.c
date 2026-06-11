@@ -14,10 +14,12 @@
 static uint64_t lapic_base = 0;
 
 static uint32_t lapic_read(uint32_t reg) {
+    /* LAPIC registers are memory-mapped I/O. */
     return *(volatile uint32_t*)(lapic_base + (uint64_t)reg);
 }
 
 static void lapic_write(uint32_t reg, uint32_t data) {
+    /* Write one LAPIC register through the mapped MMIO window. */
     *(volatile uint32_t*)(lapic_base + (uint64_t)reg) = data;
 }
 
@@ -36,15 +38,18 @@ static inline void wrmsr(uint32_t msr, uint64_t value) {
 }
 
 void lapic_init() {
+    /* Enable the LAPIC through the APIC base MSR. */
     klog(LOG_INFO, "APIC", "Step 1: MSR");
     uint64_t base_msr = rdmsr(MSR_APIC_BASE);
     wrmsr(MSR_APIC_BASE, base_msr | (1 << 11)); 
 
+    /* Discover the physical LAPIC base from ACPI. */
     klog(LOG_INFO, "APIC", "Step 2: Mapping");
     uint32_t phys_addr = acpi_get_lapic_addr();
     if (phys_addr == 0) phys_addr = 0xFEE00000;
     lapic_base = (uint64_t)phys_addr;
 
+    /* Enable the spurious interrupt vector and APIC. */
     klog(LOG_INFO, "APIC", "Step 3: SVR");
     lapic_write(LAPIC_SVR, 0x100 | 0xFF);
     
@@ -60,16 +65,19 @@ void lapic_eoi() {
 }
 
 void lapic_timer_init(uint32_t hz) {
+    /* Divide the LAPIC timer clock to a manageable rate. */
     lapic_write(LAPIC_TMRDIV, 0x03); // Divide by 16
     
-    // 10MHz / hz gives a reasonable baseline for QEMU without a long calibration
+    /* Use a simple baseline calibration for virtualized environments. */
     uint32_t count = 10000000 / hz; 
 
+    /* Program periodic timer mode on vector 32. */
     lapic_write(LAPIC_LVT_TMR, 32 | (1 << 17)); // Vector 32, Periodic mode
     lapic_write(LAPIC_TMRINIT, count);
 }
 
 void lapic_send_ipi(uint8_t apic_id, uint32_t vector) {
+    /* Send an IPI by writing the destination and command registers. */
     *(volatile uint32_t*)(lapic_base + 0x310) = (uint32_t)apic_id << 24;
     *(volatile uint32_t*)(lapic_base + 0x300) = vector;
 }

@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+/**
+ * @file net.h
+ * @brief Ethernet, IPv4, TCP, UDP, and ARP helpers.
+ */
+
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_ARP  0x0806
 #define ETHERTYPE_IPV6 0x86DD
@@ -95,22 +100,68 @@ typedef struct {
     uint8_t  dst_ip[4];
 } __attribute__((packed)) arp_packet_t;
 
+/**
+ * Initialize the network stack and NIC state.
+ */
 void net_init();
+
+/**
+ * Dispatch one received Ethernet frame.
+ */
 void net_handle_packet(void* data, uint16_t len);
+
+/**
+ * Get the number of received packets.
+ */
 uint64_t net_get_rx_count();
+
+/**
+ * Get the number of transmitted packets.
+ */
 uint64_t net_get_tx_count();
+
+/**
+ * Read the current IPv4 address.
+ */
 void net_get_ip(uint8_t* ip);
+
+/**
+ * Set the current IPv4 address.
+ */
 void net_set_ip(const uint8_t* ip);
 
+/**
+ * Send an ARP request for a target IP.
+ */
 void net_send_arp_request(const uint8_t* target_ip);
+
+/**
+ * Send an ICMP echo request.
+ */
 void net_ping(const uint8_t* target_ip);
+
+/**
+ * Send a UDP payload.
+ */
 void net_send_udp(const uint8_t* target_ip, uint16_t src_port, uint16_t dst_port, const void* data, uint16_t len);
+
+/**
+ * Send a TCP segment.
+ */
 void net_send_tcp(const uint8_t* target_ip, uint16_t src_port, uint16_t dst_port, uint32_t seq, uint32_t ack, uint8_t flags, const void* data, uint16_t len);
 
 typedef void (*udp_handler_t)(const uint8_t* src_ip, uint16_t src_port, uint16_t dst_port, void* data, uint16_t len);
+
+/**
+ * Bind a UDP port to a handler.
+ */
 void net_udp_bind(uint16_t port, udp_handler_t handler);
 
 typedef void (*tcp_handler_t)(const uint8_t* src_ip, uint16_t src_port, uint16_t dst_port, tcp_packet_t* tcp, void* data, uint16_t len);
+
+/**
+ * Bind a TCP port to a handler.
+ */
 void net_tcp_bind(uint16_t port, tcp_handler_t handler);
 
 #endif

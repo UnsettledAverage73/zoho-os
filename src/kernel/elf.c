@@ -5,6 +5,7 @@
 #include <string.h>
 
 bool elf_load(void* elf_data, void** entry_point, void** pml4) {
+    /* Parse the ELF header and build a fresh user address space. */
     elf_header_t* header = (elf_header_t*)elf_data;
 
     if (header->magic != ELF_MAGIC) {
@@ -19,6 +20,7 @@ bool elf_load(void* elf_data, void** entry_point, void** pml4) {
         elf_phdr_t* phdr = (elf_phdr_t*)((uint8_t*)elf_data + header->phoff + (i * header->phentsize));
 
         if (phdr->type == PT_LOAD) {
+            /* Loadable segments become user mappings backed by fresh frames. */
             uint64_t flags = PAGE_USER;
             if (phdr->flags & 2) flags |= PAGE_WRITABLE; // PF_W
 
@@ -35,7 +37,7 @@ bool elf_load(void* elf_data, void** entry_point, void** pml4) {
                 
                 memset(frame, 0, 4096);
                 
-                // Determine what part of the file to copy to this page
+                /* Determine which bytes from the file belong in this page. */
                 uint64_t copy_offset_in_page = 0;
                 uint64_t copy_src_offset = phdr->offset + (p * 4096);
                 uint64_t copy_size = 4096;

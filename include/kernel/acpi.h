@@ -3,6 +3,14 @@
 
 #include <stdint.h>
 
+/**
+ * @file acpi.h
+ * @brief ACPI data structures and discovery helpers.
+ *
+ * The kernel uses ACPI primarily to find the MADT and extract the LAPIC
+ * address plus enabled CPU APIC IDs.
+ */
+
 typedef struct {
     char signature[8];
     uint8_t checksum;
@@ -41,8 +49,24 @@ typedef struct {
     uint32_t flags;
 } __attribute__((packed)) acpi_madt_local_apic_t;
 
+/**
+ * Discover ACPI tables and cache the LAPIC address plus CPU IDs.
+ */
 void acpi_init();
+
+/**
+ * Get the physical LAPIC base address discovered from ACPI.
+ *
+ * @return LAPIC physical address, or 0 if not found.
+ */
 uint32_t acpi_get_lapic_addr();
+
+/**
+ * Get the list of enabled CPU APIC IDs.
+ *
+ * @param count Output parameter that receives the number of IDs.
+ * @return Pointer to an internal APIC-ID array.
+ */
 uint8_t* acpi_get_cpu_ids(int* count);
 
 #endif

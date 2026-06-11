@@ -23,6 +23,7 @@ static volatile int ap_started_count = 0;
 void ap_main(uint64_t apic_id_64) {
     uint8_t apic_id = (uint8_t)apic_id_64;
     
+    /* Each AP boots like a tiny kernel: CPU, GDT, IDT, LAPIC, timer. */
     cpu_init(apic_id);
     gdt_init();
     idt_init_per_cpu();
@@ -42,7 +43,7 @@ void ap_main(uint64_t apic_id_64) {
 void smp_init() {
     klog(LOG_INFO, "SMP", "Starting AP bring-up...");
     
-    // 1. Prepare trampoline at 0x8000
+    /* 1. Copy the real-mode/early-boot trampoline into low memory. */
     uint64_t trampoline_size = (uint64_t)trampoline_end - (uint64_t)trampoline_start;
     memcpy((void*)0x8000, trampoline_start, trampoline_size);
 
@@ -57,42 +58,39 @@ void smp_init() {
     *(uint64_t*)(0x8000 + p4_off) = cr3;
     *(uint64_t*)(0x8000 + entry_off) = (uint64_t)ap_main;
 
-    // 2. Discover CPUs
+    /* 2. Enumerate enabled CPUs from ACPI. */
     int cpu_count;
     uint8_t* cpu_ids = acpi_get_cpu_ids(&cpu_count);
     uint8_t bsp_id = lapic_get_id();
 
     for (int i = 0; i < cpu_count; i++) {
         uint8_t apic_id = cpu_ids[i];
-        if (apic_id == bsp_id) continue; // Skip BSP
+        if (apic_id == bsp_id) continue; /* Skip BSP. */
 
-        // Consolidation: Minimal logging during wakeup
-        // klog(LOG_INFO, "SMP", "Waking up CPU...");
-        
-        // Pass APIC ID to trampoline so AP knows who it is
+        /* Pass the target APIC ID to the trampoline. */
         *(uint64_t*)(0x8000 + apic_id_off) = apic_id;
 
-        // Allocate per-CPU stack
+        /* Give the AP a private kernel stack. */
         void* stack = kmalloc(4096 * 4);
         *(uint64_t*)(0x8000 + stack_off) = (uint64_t)stack + 4096 * 4;
 
         int current_count = ap_started_count;
 
-        // INIT IPI
+        /* INIT IPI resets the target core. */
         lapic_send_ipi(apic_id, 0x00000500);
         delay_ms(10); // Spec: 10ms after INIT
 
-        // SIPI 1
+        /* SIPI starts the trampoline at 0x8000. */
         lapic_send_ipi(apic_id, 0x00000608); // Vector 0x08 -> 0x8000
         delay_us(200); // Spec: 200us after SIPI
 
-        // SIPI 2 (if not started)
+        /* A second SIPI is standard if the first wakeup is missed. */
         if (ap_started_count == current_count) {
             lapic_send_ipi(apic_id, 0x00000608);
             delay_us(200);
         }
 
-        // Wait for AP to signal online with a faster polling loop and 100ms timeout
+        /* Wait for the AP to increment the startup counter. */
         uint32_t timeout = 100000; // ~100ms
         while (ap_started_count == current_count && timeout--) {
             __asm__ volatile ("pause");

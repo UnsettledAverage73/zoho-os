@@ -8,18 +8,18 @@ static uint64_t ticks = 0;
 void pit_init(uint32_t frequency) {
     uint32_t divisor = 1193182 / frequency;
 
-    // Send the command byte.
+    /* Program channel 0 in rate-generator mode. */
     outb(0x43, 0x36);
 
-    // Divisor has to be sent byte-wise, so split here into upper/lower bytes.
+    /* The divisor is written as two bytes. */
     uint8_t l = (uint8_t)(divisor & 0xFF);
     uint8_t h = (uint8_t)( (divisor>>8) & 0xFF );
 
-    // Send the frequency divisor.
+    /* Load the frequency divisor. */
     outb(0x40, l);
     outb(0x40, h);
 
-    // Unmask Timer IRQ
+    /* Unmask IRQ0. */
     uint8_t mask = inb(0x21);
     outb(0x21, mask & ~1);
 
@@ -27,6 +27,7 @@ void pit_init(uint32_t frequency) {
 }
 
 void pit_handler() {
+    /* Update the global tick counter and task accounting. */
     ticks++;
     task_timer_tick();
 }
@@ -45,23 +46,23 @@ uint64_t rdtsc() {
 
 void tsc_calibrate() {
     uint64_t start_ticks = ticks;
-    // Wait for a tick boundary
+    /* Wait for a tick boundary before measuring. */
     while (ticks == start_ticks);
     
     uint64_t start_tsc = rdtsc();
     start_ticks = ticks;
-    // Wait 1 tick (10ms)
+    /* Measure over one PIT tick. */
     while (ticks == start_ticks);
     uint64_t end_tsc = rdtsc();
     
-    // Freq in MHz = cycles in 10ms / 10000
+    /* Convert 10ms cycle count to MHz. */
     tsc_freq_mhz = (end_tsc - start_tsc) / 10000;
     if (tsc_freq_mhz == 0) tsc_freq_mhz = 2000; // Fallback to 2GHz
 }
 
 void delay_us(uint32_t us) {
     if (tsc_freq_mhz == 0) {
-        // Not calibrated yet, use a very rough loop fallback
+        /* Fallback path before TSC calibration. */
         for (volatile uint32_t i = 0; i < us * 1000; i++) {
             __asm__ volatile ("pause");
         }

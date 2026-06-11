@@ -14,6 +14,10 @@ static spinlock_t pmm_lock;
 extern uint8_t kernel_start[];
 extern uint8_t kernel_end[];
 
+/*
+ * Bitmap helpers.
+ * One bit represents one physical 4 KiB frame.
+ */
 static void bitmap_set(uint64_t frame) {
     frame_bitmap[frame / 32] |= (1 << (frame % 32));
 }
@@ -30,6 +34,7 @@ void pmm_init(struct multiboot_info* mb_info) {
     spin_init(&pmm_lock);
     uint64_t flags = spin_lock_irqsave(&pmm_lock);
 
+    /* Start pessimistic: assume every frame is unavailable. */
     for (int i = 0; i < MAX_FRAMES / 32; i++) frame_bitmap[i] = 0xFFFFFFFF;
     for (int i = 0; i < MAX_FRAMES; i++) ref_counts[i] = 0;
 
@@ -46,8 +51,9 @@ void pmm_init(struct multiboot_info* mb_info) {
             for (struct multiboot_mmap_entry* entry = mmap->entries;
                  (uint8_t*)entry < (uint8_t*)tag + tag->size;
                  entry = (struct multiboot_mmap_entry*)((uint8_t*)entry + mmap->entry_size)) {
-                
+
                 if (entry->type == 1) { // Available
+                    /* Mark firmware-reported usable RAM as free frame-by-frame. */
                     for (uint64_t addr = entry->addr; addr < entry->addr + entry->len; addr += PAGE_SIZE) {
                         uint64_t frame = addr / PAGE_SIZE;
                         if (frame < MAX_FRAMES) {
@@ -61,18 +67,21 @@ void pmm_init(struct multiboot_info* mb_info) {
     }
 
     uint64_t k_end = (uint64_t)kernel_end;
+    /* Reserve the kernel image itself. */
     for (uint64_t addr = 0; addr < k_end; addr += PAGE_SIZE) {
         bitmap_set(addr / PAGE_SIZE);
     }
     
+    /* Reserve the Multiboot info block so later code can still read it. */
     for (uint64_t addr = (uint64_t)mb_info; addr < mbi_end; addr += PAGE_SIZE) {
         bitmap_set(addr / PAGE_SIZE);
     }
 
-    // Optimization: Only scan up to the highest available address found
+    /* Only scan up to the highest usable address discovered. */
     uint64_t max_frame = max_addr / PAGE_SIZE;
     if (max_frame > MAX_FRAMES) max_frame = MAX_FRAMES;
 
+    /* Build the free-frame stack from the bitmap. */
     for (uint64_t f = 0; f < max_frame; f++) {
         if (!bitmap_test(f)) {
             free_stack[++stack_ptr] = f * PAGE_SIZE;
@@ -97,6 +106,7 @@ void* pmm_alloc_frame() {
         spin_unlock_irqrestore(&pmm_lock, flags);
         return NULL;
     }
+    /* Pop one free frame and mark it in-use. */
     uint64_t addr = free_stack[stack_ptr--];
     bitmap_set(addr / PAGE_SIZE);
     ref_counts[addr / PAGE_SIZE] = 1;
@@ -117,6 +127,7 @@ void pmm_free_frame(void* frame) {
     if (ref_counts[f] > 0) {
         ref_counts[f]--;
         if (ref_counts[f] == 0) {
+            /* Return the frame to the free stack only when nobody references it. */
             if (bitmap_test(f)) {
                 bitmap_unset(f);
                 free_stack[++stack_ptr] = addr;

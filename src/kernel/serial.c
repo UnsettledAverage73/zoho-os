@@ -6,6 +6,7 @@
 #define COM1 0x3F8
 
 void serial_init() {
+    /* Configure COM1 for 38400 8N1 and enable RX interrupts. */
     outb(COM1 + 1, 0x00);    // Disable all interrupts
     outb(COM1 + 3, 0x80);    // Enable DLAB (set baud rate divisor)
     outb(COM1 + 0, 0x03);    // Set divisor to 3 (38400 baud)
@@ -14,10 +15,10 @@ void serial_init() {
     outb(COM1 + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
     outb(COM1 + 4, 0x0B);    // IRQs enabled, RTS/DSR set
     
-    // Enable Data Received interrupt
+    /* Enable received-data interrupts. */
     outb(COM1 + 1, 0x01);
     
-    // Unmask IRQ 4 in PIC
+    /* Unmask IRQ4 so serial input can reach the CPU. */
     uint8_t mask = inb(0x21);
     outb(0x21, mask & ~(1 << 4));
 }
@@ -32,7 +33,7 @@ void serial_putc(char c) {
 }
 
 void serial_handler() {
-    // Read while data available
+    /* Drain all pending input bytes and feed the shell. */
     while (inb(COM1 + 5) & 0x01) {
         char c = inb(COM1);
         shell_input(c);

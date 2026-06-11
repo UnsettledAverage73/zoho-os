@@ -12,6 +12,7 @@ uint32_t pci_config_read(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset
     address = (uint32_t)((lbus << 16) | (lslot << 11) |
               (lfunc << 8) | (offset & 0xFC) | ((uint32_t)0x80000000));
               
+    /* Select a config-space DWORD through the PCI config address port. */
     outl(PCI_CONFIG_ADDRESS, address);
     return inl(PCI_CONFIG_DATA);
 }
@@ -25,6 +26,7 @@ void pci_config_write(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, u
     address = (uint32_t)((lbus << 16) | (lslot << 11) |
               (lfunc << 8) | (offset & 0xFC) | ((uint32_t)0x80000000));
 
+    /* Write a DWORD to the selected PCI config register. */
     outl(PCI_CONFIG_ADDRESS, address);
     outl(PCI_CONFIG_DATA, value);
 }
@@ -53,7 +55,7 @@ void pci_check_device(uint8_t bus, uint8_t device) {
     uint32_t reg12 = pci_config_read(bus, device, function, 0x0C);
     uint8_t header_type = (uint8_t)(reg12 >> 16);
     if ((header_type & 0x80) != 0) {
-        // Multi-function device, check other functions
+        /* Multi-function device, check other functions too. */
         for (function = 1; function < 8; function++) {
             reg0 = pci_config_read(bus, device, function, 0);
             if ((uint16_t)(reg0 & 0xFFFF) != 0xFFFF) {
@@ -69,6 +71,7 @@ void pci_check_device(uint8_t bus, uint8_t device) {
 }
 
 void pci_init() {
+    /* Enumerate the full PCI bus space. */
     klog(LOG_INFO, "PCI", "Enumerating PCI devices...");
     for (uint16_t bus = 0; bus < 256; bus++) {
         for (uint8_t device = 0; device < 32; device++) {

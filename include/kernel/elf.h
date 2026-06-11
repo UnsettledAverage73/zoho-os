@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/**
+ * @file elf.h
+ * @brief ELF loader structures and helpers.
+ */
+
 #define ELF_MAGIC 0x464C457F
 
 typedef struct {
@@ -37,6 +42,14 @@ typedef struct {
 
 #define PT_LOAD 1
 
+/**
+ * Load an ELF image into a new address space.
+ *
+ * @param elf_data Pointer to the ELF file contents.
+ * @param entry_point Output entry address.
+ * @param pml4 Output address-space root.
+ * @return true on success.
+ */
 bool elf_load(void* elf_data, void** entry_point, void** pml4);
 
 #endif

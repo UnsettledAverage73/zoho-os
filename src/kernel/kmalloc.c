@@ -21,12 +21,8 @@ static kmalloc_stats_t kmalloc_stats;
 void kmalloc_init() {
     spin_init(&kmalloc_lock);
     
-    // Memory is already identity mapped by the bootloader (first 4GB).
-    // We just need to mark the frames as used in PMM.
+    /* Reserve heap frames in PMM; the bootstrap identity map already covers them. */
     for (uint64_t addr = HEAP_START; addr < HEAP_START + HEAP_SIZE; addr += PAGE_SIZE) {
-        // We don't actually need to call vmm_map here because of the identity mapping,
-        // but we MUST ensure PMM knows these frames are taken.
-        // In a more advanced VMM, we would map these to specific virtual addresses.
         (void)pmm_alloc_frame(); 
     }
 
@@ -44,13 +40,13 @@ void kmalloc_init() {
 
 void* kmalloc(size_t size) {
     uint64_t flags = spin_lock_irqsave(&kmalloc_lock);
-    // Align size to 8 bytes
+    /* Align all allocations to 8 bytes. */
     size = (size + 7) & ~7;
 
     struct kmalloc_header* curr = free_list_head;
     while (curr) {
         if (curr->is_free && curr->size >= size) {
-            // Can we split this block?
+            /* Split the block if enough room remains. */
             if (curr->size >= size + sizeof(struct kmalloc_header) + 8) {
                 struct kmalloc_header* new_block = (struct kmalloc_header*)((uint8_t*)curr + sizeof(struct kmalloc_header) + size);
                 new_block->size = curr->size - size - sizeof(struct kmalloc_header);
@@ -100,7 +96,7 @@ void kfree(void* ptr) {
         kmalloc_stats.bytes_used = 0;
     }
 
-    // Coalesce free blocks
+    /* Merge adjacent free blocks to reduce fragmentation. */
     struct kmalloc_header* curr = free_list_head;
     while (curr && curr->next) {
         if (curr->is_free && curr->next->is_free) {
@@ -117,6 +113,7 @@ void kmalloc_get_stats(kmalloc_stats_t* out_stats) {
     if (!out_stats) return;
 
     uint64_t flags = spin_lock_irqsave(&kmalloc_lock);
+    /* Recompute free-space summary from the free list. */
     size_t bytes_free = 0;
     size_t largest_free = 0;
 

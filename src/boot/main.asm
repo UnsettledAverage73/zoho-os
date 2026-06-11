@@ -4,32 +4,40 @@ extern long_mode_start
 section .text
 bits 32
 start:
+    ; Disable interrupts until a real stack and paging are ready.
     cli
+    ; Install a temporary bootstrap stack.
     mov esp, stack_top
     
-    ; Preserve multiboot info early!
+    ; Preserve Multiboot2 handoff registers before any calls clobber them.
     mov edi, eax
     mov esi, ebx
 
     ; VGA Marker '1'
     mov dword [0xb8000], 0x4f314f31
 
+    ; Verify GRUB really handed us a Multiboot2 kernel entry.
     cmp edi, 0x36d76289
     jne .no_multiboot
 
+    ; Make sure the CPU can execute CPUID before asking for features.
     call check_cpuid
     ; VGA Marker '2'
     mov dword [0xb8002], 0x4f324f32
 
+    ; Confirm the CPU supports x86_64 long mode.
     call check_long_mode
     ; VGA Marker '3'
     mov dword [0xb8004], 0x4f334f33
 
+    ; Build an identity-mapped paging tree for the bootstrap transition.
     call setup_page_tables
+    ; Turn on paging, PAE, and long-mode enable.
     call enable_paging
     ; VGA Marker '4'
     mov dword [0xb8006], 0x4f344f34
 
+    ; Load the 64-bit code segment and jump into long mode.
     lgdt [gdt64.pointer]
     ; edi and esi already contain eax and ebx
     jmp gdt64.code:long_mode_start
@@ -78,12 +86,14 @@ check_long_mode:
     jmp error
 
 setup_page_tables:
+    ; Point the top-level table at the next level.
     mov eax, p3_table
     or eax, 0b11 ; present + writable
     mov [p4_table], eax
 
     mov ecx, 0
 .map_p3_table:
+    ; Wire the middle level to the large-page directory table.
     mov eax, 4096
     mul ecx
     add eax, p2_table
@@ -95,6 +105,7 @@ setup_page_tables:
 
     mov ecx, 0
 .map_p2_table:
+    ; Identity-map low memory with 2 MiB huge pages.
     mov eax, 0x200000
     mul ecx
     or eax, 0b10000011
@@ -105,15 +116,19 @@ setup_page_tables:
     ret
 
 enable_paging:
+    ; Load the bootstrap page-table root.
     mov eax, p4_table
     mov cr3, eax
+    ; Enable PAE in CR4.
     mov eax, cr4
     or eax, 1 << 5
     mov cr4, eax
+    ; Set EFER.LME to allow long mode.
     mov ecx, 0xC0000080
     rdmsr
     or eax, 1 << 8
     wrmsr
+    ; Finally enable paging in CR0.
     mov eax, cr0
     or eax, 1 << 31
     mov cr0, eax

@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+/**
+ * @file ata.h
+ * @brief ATA PIO disk access helpers.
+ */
+
 #define ATA_PRIMARY_IO 0x1F0
 
 #define ATA_REG_DATA 0
@@ -24,8 +29,21 @@
 #define ATA_SR_DRQ 0x08
 #define ATA_SR_ERR 0x01
 
+/**
+ * Initialize the primary ATA drive in polling mode.
+ *
+ * @return 0 on success, negative on failure.
+ */
 int ata_init();
+
+/**
+ * Read one 512-byte sector.
+ */
 void ata_read_sector(uint32_t lba, uint8_t* buffer);
+
+/**
+ * Write one 512-byte sector.
+ */
 void ata_write_sector(uint32_t lba, uint8_t* buffer);
 
 #endif

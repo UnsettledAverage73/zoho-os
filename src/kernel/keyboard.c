@@ -15,6 +15,7 @@ static const char kbd_us[128] = {
 extern void shell_input(char c);
 
 static void ps2_wait_input_ready() {
+    /* Wait until the controller has input ready to read. */
     uint32_t timeout = 100000;
     while (timeout--) {
         if (inb(0x64) & 1) return;
@@ -22,6 +23,7 @@ static void ps2_wait_input_ready() {
 }
 
 static void ps2_wait_output_ready() {
+    /* Wait until the controller can accept another byte. */
     uint32_t timeout = 100000;
     while (timeout--) {
         if ((inb(0x64) & 2) == 0) return;
@@ -29,6 +31,7 @@ static void ps2_wait_output_ready() {
 }
 
 void keyboard_handler() {
+    /* Translate scancodes with a simple US keymap. */
     uint8_t scancode = inb(0x60);
     if (scancode & 0x80) {
         // Key release
@@ -41,7 +44,7 @@ void keyboard_handler() {
 }
 
 void keyboard_init() {
-    // Enable first PS/2 port IRQ in the controller command byte.
+    /* Enable the first PS/2 port IRQ in the controller command byte. */
     ps2_wait_output_ready();
     outb(0x64, 0x20);
     ps2_wait_input_ready();
@@ -52,7 +55,7 @@ void keyboard_init() {
     ps2_wait_output_ready();
     outb(0x60, status);
 
-    // Unmask Keyboard IRQ
+    /* Unmask IRQ1 so the keyboard reaches the IDT. */
     uint8_t mask = inb(0x21);
     outb(0x21, mask & ~2);
 }

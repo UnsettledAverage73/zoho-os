@@ -11,6 +11,7 @@ static uint16_t next_local_port = 49152;
 static void tcp_handle_packet(const uint8_t* src_ip, uint16_t src_port, uint16_t dst_port, tcp_packet_t* tcp, void* data, uint16_t len) {
     (void)data; (void)len;
     
+    /* Match an incoming segment to an existing connection. */
     tcp_conn_t* conn = NULL;
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         if (connections[i].state != TCP_STATE_CLOSED && 
@@ -26,8 +27,7 @@ static void tcp_handle_packet(const uint8_t* src_ip, uint16_t src_port, uint16_t
         if (tcp->flags & TCP_FLAG_SYN) {
             klog(LOG_INFO, "TCP", "Incoming connection request from %d.%d.%d.%d:%d",
                  src_ip[0], src_ip[1], src_ip[2], src_ip[3], src_port);
-            // In a real OS, we'd check for a listening socket.
-            // For now, let's just RST.
+            /* No listener: reject the incoming SYN with RST. */
             net_send_tcp(src_ip, dst_port, src_port, 0, ntohl(tcp->seq) + 1, TCP_FLAG_RST | TCP_FLAG_ACK, NULL, 0);
         }
         return;
@@ -46,7 +46,7 @@ static void tcp_handle_packet(const uint8_t* src_ip, uint16_t src_port, uint16_t
             conn->ack = conn->remote_seq;
             conn->remote_ack = ack;
             
-            // Send ACK
+            /* Finish the three-way handshake. */
             net_send_tcp(src_ip, conn->local_port, src_port, conn->seq, conn->ack, TCP_FLAG_ACK, NULL, 0);
         }
     } else if (conn->state == TCP_STATE_ESTABLISHED) {
@@ -56,7 +56,7 @@ static void tcp_handle_packet(const uint8_t* src_ip, uint16_t src_port, uint16_t
             conn->ack = seq + 1;
             net_send_tcp(src_ip, conn->local_port, src_port, conn->seq, conn->ack, TCP_FLAG_ACK, NULL, 0);
             
-            // Send FIN
+            /* Begin connection teardown. */
             net_send_tcp(src_ip, conn->local_port, src_port, conn->seq, conn->ack, TCP_FLAG_FIN | TCP_FLAG_ACK, NULL, 0);
             conn->state = TCP_STATE_LAST_ACK;
             conn->seq++;
@@ -70,12 +70,12 @@ static void tcp_handle_packet(const uint8_t* src_ip, uint16_t src_port, uint16_t
 }
 
 void tcp_init() {
+    /* Clear all connection slots. */
     memset(connections, 0, sizeof(connections));
-    // We bind some common ports to our handler
-    // In a real OS, this would be more dynamic.
 }
 
 void tcp_connect(const uint8_t* ip, uint16_t port) {
+    /* Pick a free connection slot and send SYN. */
     tcp_conn_t* conn = NULL;
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         if (connections[i].state == TCP_STATE_CLOSED) {
@@ -93,7 +93,7 @@ void tcp_connect(const uint8_t* ip, uint16_t port) {
     conn->remote_port = port;
     conn->local_port = next_local_port++;
     conn->state = TCP_STATE_SYN_SENT;
-    conn->seq = 0x12345678; // Random ISN in real OS
+    conn->seq = 0x12345678; /* Placeholder initial sequence number. */
     conn->ack = 0;
 
     net_tcp_bind(conn->local_port, tcp_handle_packet);

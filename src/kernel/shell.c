@@ -17,6 +17,13 @@
 #include "tcp.h"
 #include "syscall.h"
 
+/*
+ * Interactive shell implementation.
+ *
+ * The shell renders text into the terminal window, routes commands to the
+ * kernel subsystems, and mirrors output to VGA/serial for debugging.
+ */
+
 #define MAX_BUFFER 256
 #define SHELL_CHAR_W 8
 #define SHELL_CHAR_H 8
@@ -203,6 +210,7 @@ static void shell_print(const char* str) {
 }
 
 static void shell_print_lock_stats() {
+    /* Summarize the lock subsystem statistics. */
     uint32_t count = lock_get_registered_count();
     lock_stats_t stats;
 
@@ -221,6 +229,7 @@ static void shell_print_lock_stats() {
 }
 
 static void shell_execute(char* cmd) {
+    /* Parse and run a single shell command line. */
     if (strcmp(cmd, "help") == 0) {
         shell_print("Available commands: help, ls, cat <file>, write <f> <t>, exec <f>, free, heap, locks, clear, ticks, gui, net, ping <ip>, udp <msg>, tcp <ip> <port>, stress_proc, stress_disk, monitor, top, dashboard\n");
     } else if (strcmp(cmd, "dashboard") == 0) {
@@ -490,11 +499,13 @@ static void shell_execute(char* cmd) {
 }
 
 void shell_init() {
+    /* Print the initial banner and prompt. */
     shell_print("\nZoho OS Interactive Shell\n");
     shell_print("zoho> ");
 }
 
 void shell_input(char c) {
+    /* Update the input buffer and execute on Enter. */
     if (c == '\n' || c == '\r') {
         shell_putchar('\n');
         input_buffer[buffer_idx] = '\0';

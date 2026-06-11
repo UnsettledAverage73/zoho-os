@@ -31,10 +31,12 @@ static inline void wrmsr(uint32_t msr, uint64_t value) {
 
 extern void syscall_entry();
 
+/* Create a window, allocate a backing store, and map it into user space. */
 uint32_t sys_create_window(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
     window_t* win = window_create(x, y, w, h, 0xFFFFFFFF);
     cpu_t* cpu = get_cpu();
 
+    /* The top bar is reserved, so the client area is shorter. */
     uint32_t client_h = h - 25;
     uint32_t size = w * client_h * 4;
     uint32_t num_pages = (size + 4095) / 4096;
@@ -44,6 +46,7 @@ uint32_t sys_create_window(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
     window_set_owner(win, cpu->current_task->id);
     window_set_buffer(win, kernel_buf);
 
+    /* Give each window a stable user-space mapping region. */
     uint64_t user_addr = 0xA0000000 + (win->id * 0x1000000);
     for (uint32_t i = 0; i < num_pages; i++) {
         vmm_map(cpu->current_task->pml4, user_addr + i * 4096, (uint64_t)kernel_buf + i * 4096, PAGE_USER | PAGE_WRITABLE);
@@ -59,6 +62,7 @@ int sys_get_event(uint32_t win_id, gui_event_t* out_event) {
 void sys_exit(int status) {
     (void)status;
     cpu_t* cpu = get_cpu();
+    /* Mark the current task dead and yield immediately. */
     cpu->current_task->state = TASK_EXITED;
     task_yield();
 }
@@ -74,6 +78,7 @@ int sys_read(int fd, void* buffer, uint32_t count) {
 int sys_write(int fd, const void* buffer, uint32_t count) {
     (void)fd; // For now, fd ignored, always write to console
     const char* buf = (const char*)buffer;
+    /* Minimal console write path for early user programs. */
     for (uint32_t i = 0; i < count; i++) {
         vga_print_char(buf[i]);
     }
@@ -103,6 +108,7 @@ uint64_t sys_free_frames() {
 }
 
 int sys_get_sys_info(sys_info_t* info) {
+    /* Snapshot the current machine state for monitor commands. */
     info->total_frames = pmm_get_total_frames();
     info->free_frames = pmm_get_free_count();
     info->cpu_count = cpu_get_count();
@@ -124,6 +130,7 @@ int sys_get_tasks(task_info_t* tasks, uint32_t max_tasks) {
     return task_get_all_info(tasks, max_tasks);
 }
 
+/* Dispatch syscall numbers to their kernel implementations. */
 uint64_t syscall_handler_c(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) {
     (void)arg5;
     switch(num) {
@@ -145,10 +152,12 @@ uint64_t syscall_handler_c(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t 
 }
 
 void syscall_set_kernel_stack(uint64_t stack) {
+    /* Syscall entry needs the current CPU's ring-0 stack. */
     get_cpu()->kernel_stack = stack;
 }
 
 void syscall_init() {
+    /* Enable syscall/sysret support and program the entry MSRs. */
     uint64_t efer = rdmsr(MSR_EFER);
     wrmsr(MSR_EFER, efer | 1);
     wrmsr(MSR_STAR, ((uint64_t)0x10 << 48) | ((uint64_t)0x08 << 32));

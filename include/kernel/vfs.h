@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/**
+ * @file vfs.h
+ * @brief Read-only block-backed VFS helpers.
+ */
+
 #define VFS_FILE 1
 #define VFS_DIRECTORY 2
 
@@ -29,12 +34,39 @@ typedef struct {
     int in_use;
 } fd_t;
 
+/**
+ * Initialize the file descriptor table and VFS state.
+ */
 void vfs_init();
+
+/**
+ * Open a file path from the TAR-backed filesystem.
+ */
 int vfs_open(const char* path);
+
+/**
+ * Read bytes from an open file descriptor.
+ */
 int vfs_read(int fd, void* buffer, uint32_t count);
+
+/**
+ * Write bytes to an open file descriptor.
+ */
 int vfs_write(int fd, const void* buffer, uint32_t count);
+
+/**
+ * Return the size of an open file descriptor.
+ */
 uint32_t vfs_size(int fd);
+
+/**
+ * Close an open file descriptor.
+ */
 void vfs_close(int fd);
+
+/**
+ * Read a directory entry name by index.
+ */
 int vfs_readdir(int index, char* out_name);
 
 #endif

@@ -11,6 +11,7 @@ static uint8_t dhcp_server_ip[4];
 
 static void dhcp_handle(const uint8_t* src_ip, uint16_t src_port, uint16_t dst_port, void* data, uint16_t len) {
     (void)src_ip; (void)src_port; (void)dst_port;
+    /* Decode DHCP replies and react to OFFER/ACK messages. */
     if (len < sizeof(dhcp_packet_t)) return;
     dhcp_packet_t* pkt = (dhcp_packet_t*)data;
 
@@ -32,7 +33,7 @@ static void dhcp_handle(const uint8_t* src_ip, uint16_t src_port, uint16_t dst_p
         klog(LOG_INFO, "DHCP", "Received OFFER: %d.%d.%d.%d",
              dhcp_offered_ip[0], dhcp_offered_ip[1], dhcp_offered_ip[2], dhcp_offered_ip[3]);
         
-        // Send Request
+        /* Respond to an OFFER with a REQUEST. */
         uint8_t broadcast_ip[4] = {255, 255, 255, 255};
         uint16_t total_len = sizeof(dhcp_packet_t) + 12;
         dhcp_packet_t* req = kmalloc(total_len);
@@ -60,10 +61,12 @@ static void dhcp_handle(const uint8_t* src_ip, uint16_t src_port, uint16_t dst_p
 }
 
 void dhcp_init() {
+    /* Listen for DHCP replies on UDP port 68. */
     net_udp_bind(68, dhcp_handle);
 }
 
 void dhcp_discover() {
+    /* Broadcast a DHCPDISCOVER packet. */
     klog(LOG_INFO, "DHCP", "Sending DISCOVER...");
     
     uint8_t broadcast_ip[4] = {255, 255, 255, 255};

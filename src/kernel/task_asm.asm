@@ -5,7 +5,7 @@ bits 64
 
 ; switch_context(void** old_rsp, void* new_rsp)
 switch_context:
-    ; Push callee-saved registers
+    ; Save callee-saved registers from the outgoing task.
     push rbp
     push rbx
     push r12
@@ -13,13 +13,13 @@ switch_context:
     push r14
     push r15
 
-    ; Save current stack pointer
+    ; Store the current stack pointer into *old_rsp.
     mov [rdi], rsp
 
-    ; Load next stack pointer
+    ; Switch to the incoming task stack.
     mov rsp, rsi
 
-    ; Pop callee-saved registers for the next task
+    ; Restore callee-saved registers for the incoming task.
     pop r15
     pop r14
     pop r13
